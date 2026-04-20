@@ -1,141 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell, LineChart, Line, ReferenceLine } from 'recharts';
 import { TrendingUp, DollarSign, Activity, FileText, Settings, BarChart3, Coins, AlertCircle, CheckCircle, Layers, Grid, Save, RefreshCw, Zap, Plus, Trash2, Edit2, X, Sparkles, Loader, Heart, Target, ArrowDownUp, Calendar } from 'lucide-react';
-
-const RMD_TABLE = {73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2};
-const getRMD = function(age) { return RMD_TABLE[Math.min(age,90)] || 12.2; };
-
-// Returns scheduled Roth conversion amount for a given calendar year
-function rothConvForYear(inp, calYear) {
-  var schedule = {2027:inp.conv2027, 2028:inp.conv2028, 2029:inp.conv2029, 2030:inp.conv2030, 2031:inp.conv2031};
-  return schedule[calYear] || 0;
-}
-
-// SS income for a given calendar year
-// Bug fixes: Scott born Nov 1959, SS start year = birth year + claim age
-// Stacey born Aug 1962, uses actual net figures with toggle
-function ssIncomeForYear(inp, calYear) {
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
-  var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var yourStartYear = 1959 + inp.ssAge; // Scott born 1959
-  var yourSS = 0;
-
-  // Scott always gets partial first year (Nov birthday = 2 months: Nov+Dec)
-  if (calYear === yourStartYear) {
-    yourSS = yourMonthly * 2;
-  } else if (calYear > yourStartYear) {
-    var colaYrs = calYear - yourStartYear;
-    yourSS = yourMonthly * Math.pow(1 + ssCola, colaYrs) * 12;
-  }
-
-  // Stacey SS — actual net figures, respects toggle
-  var spouseSS = 0;
-  if (inp.hasSpouse && !inp.survivorMode) {
-    var staceyClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-    var staceyMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
-    var staceyStartYear = 1962 + staceyClaimAge; // Stacey born 1962
-    if (calYear === staceyStartYear) {
-      spouseSS = staceyMonthly * 5; // Aug birthday = Aug-Dec
-    } else if (calYear > staceyStartYear) {
-      var spColaYrs = calYear - staceyStartYear;
-      spouseSS = staceyMonthly * Math.pow(1 + ssCola, spColaYrs) * 12;
-    }
-  }
-
-  if (inp.survivorMode && inp.hasSpouse) return yourSS;
-  return yourSS + spouseSS;
-}
-
-// Scott's SS only (for cash flow table breakdown)
-function scottSSForYear(inp, calYear) {
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
-  var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var yourStartYear = 1959 + inp.ssAge;
-  if (calYear === yourStartYear) return yourMonthly * 2;
-  if (calYear > yourStartYear) return yourMonthly * Math.pow(1 + ssCola, calYear - yourStartYear) * 12;
-  return 0;
-}
-
-// Stacey's SS only (for cash flow table breakdown)
-function staceySSForYear(inp, calYear) {
-  if (!inp.hasSpouse || inp.survivorMode) return 0;
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var staceyClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-  var staceyMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
-  var staceyStartYear = 1962 + staceyClaimAge;
-  if (calYear === staceyStartYear) return staceyMonthly * 5;
-  if (calYear > staceyStartYear) return staceyMonthly * Math.pow(1 + ssCola, calYear - staceyStartYear) * 12;
-  return 0;
-}
-
-const MFJ = [[23200,0.10],[94300,0.12],[201050,0.22],[383900,0.24],[487450,0.32],[731200,0.35],[1e12,0.37]];
-const SGL = [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[609350,0.35],[1e12,0.37]];
-const STD_DED = {married:29200,single:14600};
-
-// v12: resolve filing status — survivorMode overrides to single
-function resolveStatus(inp) {
-  return inp.survivorMode ? 'single' : (inp.filingStatus || 'married');
-}
-
-function marginalRate(gross, status) {
-  var ded = STD_DED[status] || 29200;
-  var taxable = Math.max(0, gross - ded);
-  var brackets = status === 'married' ? MFJ : SGL;
-  var rate = 0.10;
-  for (var bi = 0; bi < brackets.length; bi++) {
-    if (taxable <= brackets[bi][0]) { rate = brackets[bi][1]; break; }
-    rate = brackets[bi][1];
-  }
-  return rate;
-}
-
-function effectiveTax(gross, status) {
-  var ded = STD_DED[status] || 29200;
-  var taxable = Math.max(0, gross - ded);
-  var brackets = status === 'married' ? MFJ : SGL;
-  var tax = 0; var prev = 0;
-  for (var bi = 0; bi < brackets.length; bi++) {
-    if (taxable <= prev) break;
-    tax += (Math.min(taxable, brackets[bi][0]) - prev) * brackets[bi][1];
-    prev = brackets[bi][0];
-  }
-  return tax;
-}
-
-// v12: Total tax including AZ state (applies to non-SS taxable income)
-function totalTaxWithState(gross, status, stateTaxRate, ssIncome) {
-  var fedTax = effectiveTax(gross, status);
-  // AZ flat tax applies to taxable income minus SS (AZ doesn't tax SS)
-  var stateGross = Math.max(0, gross - (ssIncome || 0));
-  var stateDed = STD_DED[status] || 29200;
-  var stateTaxable = Math.max(0, stateGross - stateDed);
-  var stateTax = stateTaxable * (stateTaxRate / 100);
-  return fedTax + stateTax;
-}
-
-// v12: Combined marginal rate (federal + state)
-function combinedMarginalRate(gross, status, stateTaxRate) {
-  return marginalRate(gross, status) + (stateTaxRate / 100);
-}
-
-function capeBased(cape, tenYr, tips) {
-  return {
-    stock: (1/cape) + 0.02,
-    bond: tenYr/100,
-    inflation: Math.max(0.015, tenYr/100 - tips/100)
-  };
-}
-
-function fmtC(v) {
-  if (!v && v !== 0) return '$0';
-  if (v >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
-  if (v >= 1000) return '$' + (v/1000).toFixed(0) + 'K';
-  return '$' + Math.round(v).toLocaleString();
-}
-function fmtFull(v) { return '$' + Math.round(v||0).toLocaleString(); }
-function fmtPct(v) { return (v*100).toFixed(1) + '%'; }
+import { RMD_TABLE, MFJ, SGL, STD_DED } from './engine/constants';
+import { getRMD, marginalRate, effectiveTax, totalTaxWithState, combinedMarginalRate, resolveStatus } from './engine/tax';
+import { ssBenefitFactor, ssIncomeForYear, scottSSForYear, staceySSForYear } from './engine/social-security';
+import { rothConvForYear } from './engine/roth';
+import { capeBased } from './engine/market';
+import { fmtC, fmtFull, fmtPct } from './engine/format';
 
 // ── Available options for dropdowns ───────────────────────────────────────────
 var ASSET_TYPES = ['Cash','CD','T-Bill','TIPS','Dividend ETF','REIT ETF','Equity ETF','Intl Equity','Growth Stocks','Equity','Bond','I-Bond','Annuity','Other'];
@@ -244,14 +115,6 @@ var ACCENT2  = '#d1fae5';       // light emerald tint
 var SHADOW   = '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
 
 var CARD = {background:SURFACE, border:'1px solid '+BORDER, borderRadius:12, padding:20, boxShadow:SHADOW, color:TXT1};
-
-function ssBenefitFactor(claimAge) {
-  var fra = 67;
-  if (claimAge <= 62) return 0.70;
-  if (claimAge < fra) return 1 - 0.0667 * (fra - claimAge);
-  if (claimAge > fra) return 1 + 0.08 * (claimAge - fra);
-  return 1.0;
-}
 
 function projectForSsAge(inp, er, ssClaimAge) {
   var taxable = inp.taxableBal;
