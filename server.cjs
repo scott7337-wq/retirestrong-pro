@@ -45,7 +45,11 @@ app.post('/v1/messages', async (req, res) => {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify({
+        ...req.body,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+      }),
     });
     const data = await upstream.json();
     return res.status(upstream.status).json(data);

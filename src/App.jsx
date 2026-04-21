@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { TrendingUp, DollarSign, Activity, FileText, Settings, BarChart3, Coins, AlertCircle, CheckCircle, Layers, Grid, Save, RefreshCw, Zap, Plus, Trash2, Edit2, X, MoveRight, Sparkles, Loader, Heart, Target, ArrowDownUp, Calendar } from 'lucide-react';
 import SettingsTab from './components/tabs/Settings';
 import AssetsTab from './components/tabs/Assets';
+import { fetchHoldings, fetchAiInsights } from './api.js';
 
 const RMD_TABLE = {73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2};
 const getRMD = function(age) { return RMD_TABLE[Math.min(age,90)] || 12.2; };
@@ -527,8 +528,7 @@ export default function RetireStrongPlanner() {
       setDataSource('defaults');
       return;
     }
-    fetch(API_BASE + '/api/holdings', { signal: AbortSignal.timeout(3000) })
-      .then(function(r) { return r.json(); })
+    fetchHoldings()
       .then(function(data) {
         // Accept both shapes: Personal returns { holdings: [...raw DB rows] },
         // Pro returns a bare array of already-mapped records.
@@ -1305,16 +1305,7 @@ export default function RetireStrongPlanner() {
       '[2-3 specific action items ranked by priority with timeframes]'
     ].filter(Boolean).join('\n');
 
-    fetch(API_BASE + '/v1/messages', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{role:'user', content: prompt}]
-      })
-    })
-    .then(function(r){return r.json();})
+    fetchAiInsights(prompt)
     .then(function(data) {
       var text = (data.content || []).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
       if (!text) throw new Error(data.error ? data.error.message : 'Empty response');
@@ -1510,7 +1501,7 @@ export default function RetireStrongPlanner() {
             </div>
             <div>
               <h1 style={{fontFamily:PF,fontSize:24,fontWeight:700,color:'#ecfdf5',margin:0}}>RetireStrong</h1>
-              <p style={{fontFamily:SS_FONT,fontSize:10,color:'#6ee7b7',margin:0,letterSpacing:2,textTransform:'uppercase'}}>Professional Planner v11 · {activeScen}</p>
+              <p style={{fontFamily:SS_FONT,fontSize:10,color:'#6ee7b7',margin:0,letterSpacing:2,textTransform:'uppercase'}}>RetireStrong Pro v1 · {activeScen}</p>
             </div>
           </div>
           <div style={{display:'flex',gap:22,alignItems:'center',flexWrap:'wrap'}}>
@@ -1693,7 +1684,7 @@ export default function RetireStrongPlanner() {
                 <div>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                     <span style={{fontSize:13,color:'#2dd4bf',fontWeight:700}}>Withdrawal Plan</span>
-                    <span style={{background:'#2dd4bf',color:'white',borderRadius:3,padding:'1px 5px',fontSize:8,fontWeight:700}}>v11</span>
+                    <span style={{background:'#2dd4bf',color:'white',borderRadius:3,padding:'1px 5px',fontSize:8,fontWeight:700}}>v13</span>
                   </div>
                   <div style={{fontSize:11,color:TXT3}}>Year-by-year sequencing roadmap + expense breakdown sliders</div>
                 </div>
@@ -1705,7 +1696,7 @@ export default function RetireStrongPlanner() {
                 <div>
                   <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
                     <span style={{fontSize:13,color:'#a78bfa',fontWeight:700}}>Legacy & Estate</span>
-                    <span style={{background:'#a78bfa',color:'white',borderRadius:3,padding:'1px 5px',fontSize:8,fontWeight:700}}>v11</span>
+                    <span style={{background:'#a78bfa',color:'white',borderRadius:3,padding:'1px 5px',fontSize:8,fontWeight:700}}>v13</span>
                   </div>
                   <div style={{fontSize:11,color:TXT3}}>Estate projections, legacy goal tracker, Roth inheritance advantage</div>
                 </div>
@@ -2176,7 +2167,7 @@ export default function RetireStrongPlanner() {
         {activeTab === 'cashflow' && (
           <div>
             <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:8,fontWeight:600}}>Cash Flow Projection</h2>
-            <p style={{fontSize:12,color:TXT2,marginBottom:12}}>v13 · Every year · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
+            <p style={{fontSize:12,color:TXT2,marginBottom:12}}>v1 · Every year · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
 
             {/* Stacey SS Toggle */}
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.2)',borderRadius:10,padding:'10px 16px'}}>
@@ -2848,7 +2839,7 @@ export default function RetireStrongPlanner() {
       </div>
 
       <div style={{marginTop:16,textAlign:'center'}}>
-        <p style={{fontSize:11,color:TXT3,margin:0}}>RetireStrong Personal v13.1 · {fmtC(totalPort)} · Active: {activeScen}{inp.survivorMode?' · ⚠️ SURVIVOR MODE':''}{inp.staceySS63?' · Stacey SS@63':''} · {dataSource === 'database' ? '🟢 Live from DB' : dataSource === 'offline' ? '🟡 Offline (defaults)' : '⚪ Defaults'}</p>
+        <p style={{fontSize:11,color:TXT3,margin:0}}>RetireStrong Pro v1 · {fmtC(totalPort)} · Active: {activeScen}{inp.survivorMode?' · ⚠️ SURVIVOR MODE':''}{inp.staceySS63?' · Stacey SS@63':''} · {dataSource === 'database' ? '🟢 Live from DB' : dataSource === 'offline' ? '🟡 Offline (defaults)' : '⚪ Defaults'}</p>
         <p style={{fontSize:10,color:'#1e3a5f',marginTop:3}}>Planning tool only. Consult a financial advisor for personalized guidance.</p>
       </div>
     </div>
