@@ -1305,7 +1305,7 @@ export default function RetireStrongPlanner() {
       '[2-3 specific action items ranked by priority with timeframes]'
     ].filter(Boolean).join('\n');
 
-    fetch('https://api.anthropic.com/v1/messages', {
+    fetch(API_BASE + '/v1/messages', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
