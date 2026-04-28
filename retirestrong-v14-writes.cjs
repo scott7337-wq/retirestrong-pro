@@ -424,9 +424,12 @@ module.exports = function addV14Writes(app, pool) {
     }
     if (!sets.length) return badRequest(res, 'no updatable fields in body');
     sets.push('updated_at = now()');
+    // Scope to req.userId so a user cannot edit another user's holding by guessing an id
+    vals.push(req.userId);
+    const userIdx = idx;
     try {
       const { rows } = await pool.query(
-        `UPDATE holdings SET ${sets.join(', ')} WHERE id = $1 RETURNING *`, vals);
+        `UPDATE holdings SET ${sets.join(', ')} WHERE id = $1 AND account_id IN (SELECT account_id FROM accounts WHERE user_id = $${userIdx}) RETURNING *`, vals);
       if (!rows.length) return res.status(404).json({ error: 'Holding not found' });
       // Lookup account_name for formatted response
       const accRes = await pool.query(
@@ -448,8 +451,8 @@ module.exports = function addV14Writes(app, pool) {
     const val = bucket === null || bucket === undefined ? null : parseInt(bucket, 10);
     try {
       const { rows } = await pool.query(
-        `UPDATE holdings SET bucket = $2, updated_at = now() WHERE id = $1 RETURNING *`,
-        [id, val]);
+        `UPDATE holdings SET bucket = $2, updated_at = now() WHERE id = $1 AND account_id IN (SELECT account_id FROM accounts WHERE user_id = $3) RETURNING *`,
+        [id, val, req.userId]);
       if (!rows.length) return res.status(404).json({ error: 'Holding not found' });
       res.json({ id: 'db' + rows[0].id, bucket: rows[0].bucket });
     } catch (e) { serverError(res, e); }
@@ -461,7 +464,8 @@ module.exports = function addV14Writes(app, pool) {
     if (!id) return badRequest(res, 'id required');
     try {
       const { rows } = await pool.query(
-        `DELETE FROM holdings WHERE id = $1 RETURNING id`, [id]);
+        `DELETE FROM holdings WHERE id = $1 AND account_id IN (SELECT account_id FROM accounts WHERE user_id = $2) RETURNING id`,
+        [id, req.userId]);
       if (!rows.length) return res.status(404).json({ error: 'Holding not found' });
       res.json({ deleted: true, id: 'db' + rows[0].id });
     } catch (e) { serverError(res, e); }
