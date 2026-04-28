@@ -5,3 +5,4 @@ export { getRMD, RMD_TABLE, DEFAULTS, ASSET_TYPES, RISK_LEVELS, ACCOUNT_TYPES, R
 export { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from './roth.js';
 export { buildCashFlow } from './cashflow.js';
 export { runMonteCarlo } from './montecarlo.js';
+export { fmtC, fmtFull, fmtPct } from './format.js';

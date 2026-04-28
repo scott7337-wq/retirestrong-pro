@@ -12,6 +12,7 @@ import { ssBenefitFactor, ssIncomeForYear, primarySSForYear, spouseSSForYear } f
 import { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from './engine/roth.js';
 import { buildCashFlow } from './engine/cashflow.js';
 import { runMonteCarlo } from './engine/montecarlo.js';
+import { fmtC, fmtFull, fmtPct } from './engine/format.js';
 import { flattenPlan, buildPlan } from './data/planAdapter.js';
 import { saveAllDurable, saveProfile, saveSocialSecurity, saveRothPlan, saveHealthcare, saveExpenses, saveQCD } from './data/domainSave.js';
 import MonteCarloTab    from './components/tabs/MonteCarlo.jsx';
@@ -26,15 +27,6 @@ import AIInsightsRail from './components/shell/AIInsightsRail.jsx';
 import OverviewPage from './components/overview/OverviewPage.jsx';
 import OnboardingWizard from './components/onboarding/OnboardingWizard.jsx';
 import { useAuth } from './context/AuthContext.jsx';
-
-function fmtC(v) {
-  if (!v && v !== 0) return '$0';
-  if (v >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
-  if (v >= 1000) return '$' + (v/1000).toFixed(0) + 'K';
-  return '$' + Math.round(v).toLocaleString();
-}
-function fmtFull(v) { return '$' + Math.round(v||0).toLocaleString(); }
-function fmtPct(v) { return (v*100).toFixed(1) + '%'; }
 
 var PF = "'Playfair Display', serif";
 var SS_FONT = "'Source Sans 3', sans-serif";
