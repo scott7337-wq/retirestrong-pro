@@ -287,54 +287,93 @@ Rules:
     if (!claudeResponse.ok) {
       throw new Error(`Claude API error: ${claudeData.error?.message || 'unknown'}`);
     }
-
-    // ── Handle tool calls ──────────────────────────────────────────────────
+    // ── Agentic tool loop ──────────────────────────────────────────────────
     const toolCallsMade = [];
     let finalReply = '';
-    let totalTokens = (claudeData.usage?.input_tokens || 0) + (claudeData.usage?.output_tokens || 0);
+    let totalTokens = (claudeData.usage?.input_tokens || 0) +
+                      (claudeData.usage?.output_tokens || 0);
 
-    const toolUseBlocks = (claudeData.content || []).filter((b) => b.type === 'tool_use');
-    const textBlocks    = (claudeData.content || []).filter((b) => b.type === 'text');
+    // Start with the initial Claude response
+    let currentResponse = claudeData;
+    // Build up the full message history for multi-turn tool calls
+    let loopMessages = [...messages];
 
-    if (toolUseBlocks.length > 0) {
+    // Safety limit: max 5 tool-call rounds to prevent infinite loops
+    const MAX_ROUNDS = 5;
+    let rounds = 0;
+
+    while (currentResponse.stop_reason === 'tool_use' && rounds < MAX_ROUNDS) {
+      rounds++;
+
+      // Collect all tool_use blocks from this response
+      const toolUseBlocks = currentResponse.content.filter(b => b.type === 'tool_use');
+
+      // Execute each tool call
       const toolResults = [];
       for (const toolUse of toolUseBlocks) {
-        const result = await executeToolCall(toolUse.name, toolUse.input, plan, userId, pool);
-        toolCallsMade.push({ name: toolUse.name, input: toolUse.input, result });
+        const result = await executeToolCall(
+          toolUse.name, toolUse.input, plan, userId, pool
+        );
+        toolCallsMade.push({
+          name: toolUse.name,
+          input: toolUse.input,
+          result
+        });
         toolResults.push({
           type: 'tool_result',
           tool_use_id: toolUse.id,
-          content: JSON.stringify(result),
+          content: JSON.stringify(result)
         });
       }
 
-      const followUpMessages = [
-        ...messages,
-        { role: 'assistant', content: claudeData.content },
-        { role: 'user',      content: toolResults },
+      // Add this round to message history
+      loopMessages = [
+        ...loopMessages,
+        { role: 'assistant', content: currentResponse.content },
+        { role: 'user', content: toolResults }
       ];
 
+      // Call Claude again with tool results
       const followUp = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 1024,
           system: systemPrompt,
           tools,
-          messages: followUpMessages,
-        }),
+          messages: loopMessages
+        })
       });
 
-      const followUpData = await followUp.json();
-      totalTokens += (followUpData.usage?.input_tokens || 0) + (followUpData.usage?.output_tokens || 0);
-      finalReply = (followUpData.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
-    } else {
-      finalReply = textBlocks.map((b) => b.text).join('');
+      currentResponse = await followUp.json();
+
+      if (!currentResponse.content) {
+        console.error('Empty response in tool loop round', rounds,
+          JSON.stringify(currentResponse));
+        break;
+      }
+
+      totalTokens += (currentResponse.usage?.input_tokens || 0) +
+                     (currentResponse.usage?.output_tokens || 0);
+
+      console.log(`TOOL_LOOP round ${rounds} stop_reason:`, currentResponse.stop_reason);
+    }
+
+    // Extract final text response
+    finalReply = (currentResponse.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
+
+    if (rounds >= MAX_ROUNDS) {
+      finalReply = finalReply ||
+        "I hit my tool call limit trying to answer that. " +
+        "Could you try asking in a slightly different way?";
     }
 
     // ── Parse chips from reply ─────────────────────────────────────────────
@@ -423,13 +462,13 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
       const irmaaResult = await pool.query(
         `SELECT magi_floor, magi_ceiling, monthly_surcharge
            FROM irmaa_tiers
-          WHERE filing_status = 'married'
-          ORDER BY magi_floor ASC
-          LIMIT 3`
+          WHERE filing_status = 'mfj'
+            AND effective_year = (SELECT MAX(effective_year) FROM irmaa_tiers)
+          ORDER BY magi_floor ASC`
       );
       return {
         irmaaTiers: irmaaResult.rows,
-        note: "Current year IRMAA tiers. Use read_plan to get user MAGI for headroom calc.",
+        note: "Current year IRMAA tiers (MFJ). Use read_plan to get user MAGI for headroom calc.",
       };
     }
 
