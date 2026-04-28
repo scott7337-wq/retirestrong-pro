@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const { runProjectionForUser } = require('./src/engine/server-adapter.cjs');
 
 // ── PostgreSQL ───────────────────────────────────────────────────────────────
 const pool = new Pool({
@@ -200,7 +201,10 @@ ${planSummary}
 Rules:
 - Be concise. 3-5 sentences max per response in rail mode.
 - Never do math yourself. Always call a tool to get numbers.
+   run_projection returns real cashflow data including success rate, peak balance, year-by-year cashflow summary, and MAGI.
+   query_irmaa_headroom returns the user's actual estimated MAGI and precise dollar headroom to the next IRMAA tier.
 - Every response that contains a number must cite the tool that produced it.
+- Never suggest speaking with an advisor for questions the tools can answer. Only suggest an advisor for questions outside your scope (estate planning, insurance, specific securities).
 - End every coaching response with exactly: "This is education, not investment advice."
 - Stay in scope: tax, SS timing, Roth conversions, withdrawal sequencing, spending. Decline anything else politely.
 - If the user asks something you can't answer from their plan, say so directly.
@@ -456,35 +460,93 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
     }
 
     case 'run_projection': {
-      // Simplified projection — full engine wiring in next brief.
-      const monthlyExp        = parseFloat(plan.monthly_expenses) || 8000;
-      const currentAge        = parseInt(plan.current_age) || 66;
-      const lifeExp           = parseInt(plan.life_expectancy) || 90;
-      const yearsInRetirement = lifeExp - currentAge;
-      const annualExp         = monthlyExp * 12;
-      const totalNeeded       = annualExp * yearsInRetirement * 1.03;
-      return {
-        note: "Simplified projection — full engine wiring in next brief",
-        yearsInRetirement,
-        estimatedAnnualExpenses: Math.round(annualExp),
-        roughTotalNeeded:        Math.round(totalNeeded),
-        leverOverlaysApplied:    input.leverOverlays || [],
-        spendingPolicy:          input.spendingPolicy || { type: 'flatReal' },
-      };
+      try {
+        const holdingsResult = await pool.query(
+          `SELECT h.current_value, h.asset_type, a.account_type
+           FROM holdings h
+           JOIN accounts a ON a.account_id = h.account_id
+           WHERE a.user_id = $1`,
+          [userId]
+        );
+        const result = await runProjectionForUser(
+          plan,
+          holdingsResult.rows,
+          input.leverOverlays || [],
+          input.spendingPolicy || null
+        );
+        return result;
+      } catch (err) {
+        console.error('run_projection error:', err.message);
+        return {
+          error: 'Projection failed: ' + err.message,
+          note: 'Engine error — check server logs',
+        };
+      }
     }
 
     case 'query_irmaa_headroom': {
-      const irmaaResult = await pool.query(
-        `SELECT magi_floor, magi_ceiling, monthly_surcharge
+      try {
+        const holdingsResult = await pool.query(
+          `SELECT h.current_value, h.asset_type, a.account_type
+           FROM holdings h
+           JOIN accounts a ON a.account_id = h.account_id
+           WHERE a.user_id = $1`,
+          [userId]
+        );
+        const projection = await runProjectionForUser(
+          plan, holdingsResult.rows, [], null
+        );
+
+        const irmaaResult = await pool.query(
+          `SELECT magi_floor, magi_ceiling, monthly_surcharge
            FROM irmaa_tiers
-          WHERE filing_status = 'mfj'
-            AND effective_year = (SELECT MAX(effective_year) FROM irmaa_tiers)
-          ORDER BY magi_floor ASC`
-      );
-      return {
-        irmaaTiers: irmaaResult.rows,
-        note: "Current year IRMAA tiers (MFJ). Use read_plan to get user MAGI for headroom calc.",
-      };
+           WHERE filing_status = 'mfj'
+             AND effective_year = (SELECT MAX(effective_year) FROM irmaa_tiers)
+           ORDER BY magi_floor ASC`
+        );
+
+        const magi = projection.estimatedMAGI;
+        const tiers = irmaaResult.rows;
+        const currentTier = tiers.find(t =>
+          magi >= parseFloat(t.magi_floor || 0) &&
+          magi <= parseFloat(t.magi_ceiling || Infinity)
+        );
+        const nextTier = tiers.find(t => parseFloat(t.magi_floor || 0) > magi);
+        const headroom = nextTier
+          ? Math.round(parseFloat(nextTier.magi_floor) - magi)
+          : null;
+
+        return {
+          estimatedMAGI: magi,
+          magiComponents: {
+            ssIncome:         projection.ssAnnualIncome,
+            ss85pct:          Math.round(projection.ssAnnualIncome * 0.85),
+            iraDraws:         projection.iraDrawsThisYear,
+            rothConversions:  projection.rothConvThisYear,
+          },
+          currentTier: currentTier
+            ? {
+                floor:            currentTier.magi_floor,
+                ceiling:          currentTier.magi_ceiling,
+                monthlySurcharge: currentTier.monthly_surcharge,
+              }
+            : { floor: 0, ceiling: 212000, monthlySurcharge: 0 },
+          headroomToNextTier: headroom,
+          nextTierSurcharge:   nextTier?.monthly_surcharge || null,
+          annualCostIfCrossed: nextTier
+            ? Math.round(parseFloat(nextTier.monthly_surcharge) * 12 *
+                (plan.has_spouse ? 2 : 1))
+            : null,
+          tiers: tiers.map(t => ({
+            floor:   t.magi_floor,
+            ceiling: t.magi_ceiling,
+            monthly: t.monthly_surcharge,
+          })),
+        };
+      } catch (err) {
+        console.error('query_irmaa_headroom error:', err.message);
+        return { error: 'IRMAA calculation failed: ' + err.message };
+      }
     }
 
     case 'explain_mechanism': {
