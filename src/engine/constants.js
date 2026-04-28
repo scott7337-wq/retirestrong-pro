@@ -74,7 +74,7 @@ export var DEFAULT_BUCKET_CONFIG = [
 
 export var DEFAULTS = {
   currentAge:66, retirementAge:67, lifeExpectancy:90,
-  birthYear: null, spouseBirthYear: null,
+  birthYear: 1958, spouseBirthYear: 1960,
   taxableBal:83000,
   iraBalCash:176000,
   iraBalTips:315000,

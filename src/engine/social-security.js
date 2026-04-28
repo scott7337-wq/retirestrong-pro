@@ -1,7 +1,12 @@
 // ── RetireStrong Engine: Social Security ──────────────────────────────────────
 // Person-agnostic: primary = the user, spouse = optional partner. Birth years
-// must come from the profile; missing values surface as NaN/0 rather than
-// silently substituting a fixed year.
+// must come from the profile. Missing/invalid values short-circuit to 0 to
+// prevent exponent overflow (a null birthYear would coerce to 0, making
+// startYear tiny and Math.pow(1+cola, 2026 - 0) blow up).
+
+function isValidBirthYear(y) {
+  return typeof y === 'number' && y >= 1930 && y <= 1980;
+}
 
 export function ssBenefitFactor(claimAge) {
   var fra = 67;
@@ -12,6 +17,7 @@ export function ssBenefitFactor(claimAge) {
 }
 
 export function ssIncomeForYear(inp, calYear) {
+  if (!isValidBirthYear(inp.birthYear)) return 0;
   var ssCola = (inp.ssCola || 2.5) / 100;
   var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
   var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
@@ -25,7 +31,7 @@ export function ssIncomeForYear(inp, calYear) {
     yourSS = yourMonthly * Math.pow(1 + ssCola, colaYrs) * 12;
   }
   var spouseSS = 0;
-  if (inp.hasSpouse && !inp.survivorMode) {
+  if (inp.hasSpouse && !inp.survivorMode && isValidBirthYear(inp.spouseBirthYear)) {
     var spouseBirthYear = inp.spouseBirthYear;
     var spouseClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
     var spouseMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
@@ -42,6 +48,7 @@ export function ssIncomeForYear(inp, calYear) {
 }
 
 export function primarySSForYear(inp, calYear) {
+  if (!isValidBirthYear(inp.birthYear)) return 0;
   var ssCola = (inp.ssCola || 2.5) / 100;
   var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
   var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
@@ -54,6 +61,7 @@ export function primarySSForYear(inp, calYear) {
 
 export function spouseSSForYear(inp, calYear) {
   if (!inp.hasSpouse || inp.survivorMode) return 0;
+  if (!isValidBirthYear(inp.spouseBirthYear)) return 0;
   var ssCola = (inp.ssCola || 2.5) / 100;
   var spouseBirthYear = inp.spouseBirthYear;
   var spouseClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
