@@ -1,0 +1,86 @@
+function clonePlan(p) { return Object.assign({}, p); }
+
+const SCENARIO_PRESETS = [
+  {
+    id: "base_case",
+    label: "Base Case",
+    description: "Start with your current plan exactly as it is today.",
+    buttonLabel: "Create Base Case Copy",
+    defaultName: "Base Case Copy",
+    accentColor: "#059669",
+    apply(p) { return clonePlan(p); },
+  },
+  {
+    id: "bad_first_five_years",
+    label: "Bad First Five Years",
+    description: "Test what happens if retirement begins with weak markets.",
+    buttonLabel: "Create Stress Scenario",
+    defaultName: "Bad First Five Years",
+    accentColor: "#ef4444",
+    apply(p) {
+      const n = clonePlan(p);
+      n.growthReturnRate   = Math.max(0, (n.growthReturnRate   || 7.0) - 2.0);
+      n.dividendReturnRate = Math.max(0, (n.dividendReturnRate || 6.0) - 1.0);
+      n.rothReturnRate     = Math.max(0, (n.rothReturnRate     || 7.0) - 2.0);
+      n.stockVol           = Math.min(50,(n.stockVol           || 18.0) + 4.0);
+      n.bondVol            = Math.min(30,(n.bondVol            || 6.0)  + 2.0);
+      return n;
+    },
+  },
+  {
+    id: "stagflation",
+    label: "Stagflation",
+    description: "Higher inflation, weaker returns, and more pressure on your plan.",
+    buttonLabel: "Create Stagflation Scenario",
+    defaultName: "Stagflation Scenario",
+    accentColor: "#f59e0b",
+    apply(p) {
+      const n = clonePlan(p);
+      n.tenYrTreasury      = Math.min(15,(n.tenYrTreasury     || 4.2) + 2.0);
+      n.tipsYield          = Math.max(0, (n.tipsYield         || 1.8) - 0.5);
+      n.growthReturnRate   = Math.max(0, (n.growthReturnRate  || 7.0) - 1.5);
+      n.dividendReturnRate = Math.max(0, (n.dividendReturnRate|| 6.0) - 0.75);
+      n.rothReturnRate     = Math.max(0, (n.rothReturnRate    || 7.0) - 1.5);
+      n.cashReturnRate     = Math.min(10,(n.cashReturnRate    || 4.8) + 0.5);
+      n.healthInflation    = Math.min(0.15,(n.healthInflation || 0.05) + 0.02);
+      return n;
+    },
+  },
+  {
+    id: "healthcare_shock",
+    label: "Healthcare Shock",
+    description: "Test the effect of higher medical costs later in retirement.",
+    buttonLabel: "Create Healthcare Scenario",
+    defaultName: "Healthcare Shock",
+    accentColor: "#e879f9",
+    apply(p) {
+      const n = clonePlan(p);
+      n.healthPhase1Annual = Math.round((n.healthPhase1Annual || 27896) * 1.25);
+      n.healthPhase2Annual = Math.round((n.healthPhase2Annual || 14873) * 1.35);
+      n.healthPhase1EndAge = Math.max(65,(n.healthPhase1EndAge|| 68) - 2);
+      n.healthInflation    = Math.min(0.15,(n.healthInflation || 0.05) + 0.015);
+      return n;
+    },
+  },
+  {
+    id: "spend_heavy_early_retirement",
+    label: "Spend-Heavy Early Retirement",
+    description: "Model higher spending in the active, healthy years.",
+    buttonLabel: "Create Spending Scenario",
+    defaultName: "Spend Heavy Early Retirement",
+    accentColor: "#60a5fa",
+    apply(p) {
+      const n = clonePlan(p);
+      n.travelMonthly    = Math.round((n.travelMonthly    || 1200) * 1.30);
+      n.otherMonthly     = Math.round((n.otherMonthly     || 2800) * 1.15);
+      n.foodMonthly      = Math.round((n.foodMonthly      || 1200) * 1.10);
+      n.transportMonthly = Math.round((n.transportMonthly || 600)  * 1.10);
+      n.monthlyExpenses  = (n.housingMonthly || 2200) + n.foodMonthly + n.transportMonthly + n.travelMonthly + n.otherMonthly;
+      n.extraSpend2027   = (n.extraSpend2027 || 0) + 15000;
+      n.extraSpend2028   = (n.extraSpend2028 || 0) + 10000;
+      return n;
+    },
+  },
+];
+
+export default SCENARIO_PRESETS;
