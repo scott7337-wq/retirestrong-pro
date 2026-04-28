@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RetireStrong — Scenario Comparison</title>
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="compare.css" />
+</head>
+<body>
+
+<!-- Top bar -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a href="index.html" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;">
+      <svg class="logo" viewBox="0 0 32 32" aria-label="RetireStrong">
+        <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M9 20 L14 13 L19 17 L23 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand">RetireStrong</span>
+    </a>
+    <span class="user">Scott · Plan v15</span>
+  </div>
+
+  <div class="mode-toggle" role="tablist" aria-label="Mode">
+    <button class="mode-btn" data-mode="explore" role="tab" aria-selected="false" onclick="window.location='index.html'">
+      <span class="mode-icon">◇</span> Explore
+      <span class="mode-hint">Chat-first · ephemeral</span>
+    </button>
+    <button class="mode-btn active" data-mode="compare" role="tab" aria-selected="true">
+      <span class="mode-icon">▥</span> Compare
+      <span class="mode-hint">Side-by-side · conversational</span>
+    </button>
+    <button class="mode-btn" data-mode="commit" role="tab" aria-selected="false">
+      <span class="mode-icon">●</span> Commit
+      <span class="mode-hint">Plan-first · operational</span>
+    </button>
+  </div>
+
+  <div class="topbar-right">
+    <span class="tone-pill" title="AI tone">Coach mode</span>
+    <button class="icon-btn" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- Comparison subject bar -->
+<div class="compare-subject">
+  <div class="compare-subject-left">
+    <span class="muted">Comparing</span>
+    <div class="scenario-chip scenario-a">
+      <span class="chip-dot dot-a"></span>
+      <strong>Retire-65</strong>
+      <span class="chip-meta">base</span>
+    </div>
+    <span class="vs">vs</span>
+    <div class="scenario-chip scenario-b">
+      <span class="chip-dot dot-b"></span>
+      <strong>Retire-67</strong>
+      <span class="chip-meta">+ delay SS to 70</span>
+    </div>
+    <button class="btn-ghost-sm" id="addThirdBtn">+ Add scenario</button>
+  </div>
+  <div class="compare-subject-right">
+    <button class="btn-ghost" id="swapBtn" title="Swap A/B">⇄ Swap</button>
+    <button class="btn-ghost" id="exportBtn">Export</button>
+  </div>
+</div>
+
+<!-- Main two-pane layout -->
+<main class="layout">
+
+  <!-- Chat pane -->
+  <section class="chat-pane" aria-label="AI coach">
+    <div class="chat-header">
+      <div>
+        <h2>Compare conversation</h2>
+        <p class="muted">Ask about tradeoffs. The view follows your questions.</p>
+      </div>
+      <button class="icon-btn" title="History">≡</button>
+    </div>
+
+    <div class="chat-log" id="chatLog">
+
+      <div class="msg ai">
+        <div class="avatar">RS</div>
+        <div class="bubble">
+          <p>Comparing <strong>Retire-65</strong> against <strong>Retire-67</strong>. Quick read across all four lenses:</p>
+          <ul class="lens-summary">
+            <li><span class="lens-tag">Plan</span> Retire-67 ends with <strong>+$430k</strong> at age 95 (real)</li>
+            <li><span class="lens-tag">Monte Carlo</span> Success rate <strong>91% → 96%</strong></li>
+            <li><span class="lens-tag">Taxes</span> Lifetime tax <strong>+$52k</strong> in Retire-67 (more conv.)</li>
+            <li><span class="lens-tag">Income</span> First-2-year cash flow <strong>−$108k</strong> in Retire-67</li>
+          </ul>
+          <p>The headline tradeoff: you give up ~$108k of early-retirement cash flow to gain $430k of late-life buffer and 5 points of confidence. Worth it depends on how much you value those first two years.</p>
+          <div class="suggestions">
+            <button class="chip">Show me the tax breakdown</button>
+            <button class="chip">What about IRMAA tiers?</button>
+            <button class="chip">Worst Monte Carlo paths</button>
+            <button class="chip">Why the income gap in years 1-2?</button>
+          </div>
+          <div class="disclaimer">This is education, not investment advice.</div>
+        </div>
+      </div>
+
+      <div class="msg user">
+        <div class="bubble"><p>Show me the tax breakdown</p></div>
+      </div>
+
+      <div class="msg ai">
+        <div class="avatar">RS</div>
+        <div class="bubble">
+          <p>Switched the view to <strong>Taxes</strong>. Three things to notice:</p>
+          <ul class="findings">
+            <li><strong>Retire-67 pays more lifetime tax (+$52k)</strong> — but mostly in years 67-72 because you're doing larger Roth conversions during the SS-delay window. After age 73, Retire-67 pays <em>less</em> per year.</li>
+            <li><strong>RMD shock is smaller in Retire-67</strong> — by 73, the TD balance is ~$340k smaller because of those conversions. Less forced income at the worst rate.</li>
+            <li><strong>IRMAA exposure is similar</strong> — both stay in Tier 1-2 most years, both hit Tier 3 briefly in conversion years.</li>
+          </ul>
+          <div class="tool-call">
+            <span class="tool-tag">tool</span>
+            <code>compare_scenarios(a, b, lens: "taxes")</code>
+            <button class="tool-expand">show</button>
+          </div>
+          <p>I pinned an observation on the chart at age 73. Want to see what happens if we cap Retire-67's conversions at the IRMAA Tier 1 ceiling?</p>
+          <div class="suggestions">
+            <button class="chip" id="capChip">Cap conversions at IRMAA Tier 1</button>
+            <button class="chip">Show effective tax rate by year</button>
+            <button class="chip">What if I move to a no-tax state?</button>
+          </div>
+          <div class="disclaimer">This is education, not investment advice.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Composer -->
+    <div class="composer">
+      <textarea id="composer" rows="1" placeholder="Ask about taxes, IRMAA, sequence risk, withdrawal order…"></textarea>
+      <button class="send-btn" id="sendBtn" aria-label="Send">→</button>
+    </div>
+  </section>
+
+  <!-- Compare pane -->
+  <section class="plan-pane compare-pane" aria-label="Comparison view">
+
+    <!-- Verdict strip -->
+    <div class="verdict-strip">
+      <div class="verdict-main">
+        <span class="verdict-label">AI read on this dimension</span>
+        <span class="verdict-text" id="verdictText">
+          <strong>Retire-67 wins on lifetime tax efficiency by ~$52k</strong> — but the win is concentrated post-73, and you take the pain in years 67-72.
+        </span>
+      </div>
+      <button class="verdict-expand" id="verdictExpand">Why ↓</button>
+    </div>
+    <div class="verdict-detail" id="verdictDetail" hidden>
+      <p>The mechanism: Retire-67 gives you a longer Roth-conversion runway before SS at 70. You convert $48k/yr for 5 years (vs. $32k/yr for 3 years in Retire-65), which:</p>
+      <ol>
+        <li>Increases tax paid in conversion years by ~$78k cumulative</li>
+        <li>Shrinks the TD balance by ~$340k by age 73</li>
+        <li>Reduces RMDs and post-73 ordinary income, saving ~$130k over years 73-95</li>
+      </ol>
+      <p>Net: −$78k early + $130k late = <strong>+$52k</strong>. Sensitive to: future tax rates (higher = better for Retire-67), longevity (longer = better for Retire-67), market returns during conversion window (higher = better for Retire-67).</p>
+    </div>
+
+    <!-- Dimension tabs -->
+    <div class="dim-tabs">
+      <button class="dim-tab" data-dim="plan">
+        <span class="dim-icon">▤</span> Plan
+        <span class="dim-meta">Balance over time</span>
+      </button>
+      <button class="dim-tab active" data-dim="taxes">
+        <span class="dim-icon">$</span> Taxes
+        <span class="dim-meta">Year-by-year + lifetime</span>
+      </button>
+      <button class="dim-tab" data-dim="mc">
+        <span class="dim-icon">≈</span> Monte Carlo
+        <span class="dim-meta">Confidence bands</span>
+      </button>
+      <button class="dim-tab" data-dim="income">
+        <span class="dim-icon">↓</span> Income
+        <span class="dim-meta">Where the cash comes from</span>
+      </button>
+    </div>
+
+    <!-- DIMENSION: PLAN -->
+    <div class="dim-view" id="dim-plan" hidden>
+      <div class="compare-grid">
+        <!-- A -->
+        <div class="compare-card card-a">
+          <div class="compare-card-header">
+            <span class="card-marker dot-a"></span>
+            <h3>Retire-65 <span class="muted">· base</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Final balance (95)</span><strong>$1.42M</strong></div>
+            <div class="mini-kpi"><span>Peak balance</span><strong>$2.18M @ 73</strong></div>
+            <div class="mini-kpi"><span>Lifetime spend</span><strong>$3.40M</strong></div>
+          </div>
+          <svg class="mini-chart" viewBox="0 0 400 160" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="40" x2="400" y2="40"/><line x1="0" y1="80" x2="400" y2="80"/><line x1="0" y1="120" x2="400" y2="120"/></g>
+            <path class="line line-a" d="M 0,110 C 50,95 100,75 150,65 C 200,55 250,55 300,75 C 340,95 380,120 400,135"/>
+          </svg>
+        </div>
+        <!-- B -->
+        <div class="compare-card card-b">
+          <div class="compare-card-header">
+            <span class="card-marker dot-b"></span>
+            <h3>Retire-67 <span class="muted">· + SS delay</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Final balance (95)</span><strong class="winner">$1.85M</strong></div>
+            <div class="mini-kpi"><span>Peak balance</span><strong>$2.34M @ 75</strong></div>
+            <div class="mini-kpi"><span>Lifetime spend</span><strong>$3.40M</strong></div>
+          </div>
+          <svg class="mini-chart" viewBox="0 0 400 160" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="40" x2="400" y2="40"/><line x1="0" y1="80" x2="400" y2="80"/><line x1="0" y1="120" x2="400" y2="120"/></g>
+            <path class="line line-b" d="M 0,110 C 50,105 100,85 150,68 C 200,52 250,48 300,55 C 340,72 380,98 400,118"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIMENSION: TAXES (default visible) -->
+    <div class="dim-view" id="dim-taxes">
+      <div class="compare-grid">
+        <div class="compare-card card-a">
+          <div class="compare-card-header">
+            <span class="card-marker dot-a"></span>
+            <h3>Retire-65 <span class="muted">· base</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Lifetime fed tax</span><strong>$612k</strong></div>
+            <div class="mini-kpi"><span>Avg eff. rate</span><strong>14.8%</strong></div>
+            <div class="mini-kpi"><span>RMD years</span><strong>23</strong></div>
+          </div>
+          <div class="mini-chart-label">Federal tax by year (real $)</div>
+          <svg class="mini-chart bars" viewBox="0 0 400 140" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="35" x2="400" y2="35"/><line x1="0" y1="70" x2="400" y2="70"/><line x1="0" y1="105" x2="400" y2="105"/></g>
+            <!-- 30 bars representing ages 65-95 -->
+            <g class="bars-a"></g>
+          </svg>
+          <div class="bar-axis">
+            <span>65</span><span>75</span><span>85</span><span>95</span>
+          </div>
+        </div>
+        <div class="compare-card card-b">
+          <div class="compare-card-header">
+            <span class="card-marker dot-b"></span>
+            <h3>Retire-67 <span class="muted">· + SS delay</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Lifetime fed tax</span><strong class="loser">$664k</strong></div>
+            <div class="mini-kpi"><span>Avg eff. rate</span><strong>15.4%</strong></div>
+            <div class="mini-kpi"><span>RMD years</span><strong class="winner">21</strong></div>
+          </div>
+          <div class="mini-chart-label">Federal tax by year (real $)</div>
+          <svg class="mini-chart bars" viewBox="0 0 400 140" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="35" x2="400" y2="35"/><line x1="0" y1="70" x2="400" y2="70"/><line x1="0" y1="105" x2="400" y2="105"/></g>
+            <g class="bars-b"></g>
+            <!-- pinned observation -->
+            <g class="pin-marker" data-pin="age73">
+              <circle cx="120" cy="50" r="9" fill="#FBEFE3" stroke="#B8651A" stroke-width="1.5"/>
+              <text x="120" y="54" text-anchor="middle" font-size="10" font-weight="700" fill="#B8651A">!</text>
+            </g>
+          </svg>
+          <div class="bar-axis">
+            <span>65</span><span>75</span><span>85</span><span>95</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pinned observation -->
+      <div class="pinned-obs">
+        <span class="pin-icon">!</span>
+        <div>
+          <div class="pin-title">Pinned by AI · age 73 in Retire-67</div>
+          <div class="pin-body">RMD-driven tax spike that <em>doesn't</em> happen here — the $340k smaller TD balance from earlier conversions cuts year-73 tax by ~$11k. This is where the Retire-67 strategy starts paying you back.</div>
+        </div>
+        <button class="pin-dismiss">×</button>
+      </div>
+
+      <!-- Tradeoff table -->
+      <div class="tradeoff-table">
+        <h4>Tradeoff at a glance</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th class="num">Retire-65</th>
+              <th class="num">Retire-67</th>
+              <th class="num">Δ</th>
+              <th>Read</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lifetime federal tax</td>
+              <td class="num">$612,000</td>
+              <td class="num">$664,000</td>
+              <td class="num delta-neg">+$52,000</td>
+              <td><span class="muted">Retire-67 pays more</span></td>
+            </tr>
+            <tr>
+              <td>Tax paid before age 73</td>
+              <td class="num">$182,000</td>
+              <td class="num">$260,000</td>
+              <td class="num delta-neg">+$78,000</td>
+              <td><span class="muted">Conversion years</span></td>
+            </tr>
+            <tr>
+              <td>Tax paid 73–95</td>
+              <td class="num">$430,000</td>
+              <td class="num">$404,000</td>
+              <td class="num delta-pos">−$26,000</td>
+              <td><span class="muted">Smaller RMDs</span></td>
+            </tr>
+            <tr>
+              <td>Avg effective rate</td>
+              <td class="num">14.8%</td>
+              <td class="num">15.4%</td>
+              <td class="num delta-neg">+0.6pp</td>
+              <td><span class="muted">Higher conversions push avg up</span></td>
+            </tr>
+            <tr>
+              <td>Years in IRMAA Tier 2+</td>
+              <td class="num">4</td>
+              <td class="num">6</td>
+              <td class="num delta-neg">+2</td>
+              <td><span class="muted">More conversion years cross Tier 1</span></td>
+            </tr>
+            <tr>
+              <td>Final Roth balance</td>
+              <td class="num">$340,000</td>
+              <td class="num">$612,000</td>
+              <td class="num delta-pos">+$272,000</td>
+              <td><span class="muted">Tax-free inheritance pool</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DIMENSION: MONTE CARLO -->
+    <div class="dim-view" id="dim-mc" hidden>
+      <div class="compare-grid">
+        <div class="compare-card card-a">
+          <div class="compare-card-header">
+            <span class="card-marker dot-a"></span>
+            <h3>Retire-65 <span class="muted">· base</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Success rate</span><strong>91%</strong></div>
+            <div class="mini-kpi"><span>10th %ile (95)</span><strong>$0</strong></div>
+            <div class="mini-kpi"><span>Median (95)</span><strong>$1.42M</strong></div>
+          </div>
+          <div class="mini-chart-label">Confidence bands · 1,000 trials</div>
+          <svg class="mini-chart" viewBox="0 0 400 160" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="40" x2="400" y2="40"/><line x1="0" y1="80" x2="400" y2="80"/><line x1="0" y1="120" x2="400" y2="120"/></g>
+            <!-- 90% band -->
+            <path class="band-a-90" d="M 0,110 L 400,150 L 400,40 L 0,90 Z" />
+            <!-- 50% band -->
+            <path class="band-a-50" d="M 0,108 L 400,130 L 400,55 L 0,98 Z" />
+            <!-- median -->
+            <path class="line line-a" d="M 0,103 C 100,90 200,75 300,80 L 400,118"/>
+          </svg>
+        </div>
+        <div class="compare-card card-b">
+          <div class="compare-card-header">
+            <span class="card-marker dot-b"></span>
+            <h3>Retire-67 <span class="muted">· + SS delay</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Success rate</span><strong class="winner">96%</strong></div>
+            <div class="mini-kpi"><span>10th %ile (95)</span><strong class="winner">$210k</strong></div>
+            <div class="mini-kpi"><span>Median (95)</span><strong class="winner">$1.85M</strong></div>
+          </div>
+          <div class="mini-chart-label">Confidence bands · 1,000 trials</div>
+          <svg class="mini-chart" viewBox="0 0 400 160" preserveAspectRatio="none">
+            <g class="grid"><line x1="0" y1="40" x2="400" y2="40"/><line x1="0" y1="80" x2="400" y2="80"/><line x1="0" y1="120" x2="400" y2="120"/></g>
+            <path class="band-b-90" d="M 0,110 L 400,138 L 400,30 L 0,88 Z" />
+            <path class="band-b-50" d="M 0,107 L 400,118 L 400,48 L 0,96 Z" />
+            <path class="line line-b" d="M 0,102 C 100,82 200,62 300,60 L 400,100"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="tradeoff-table">
+        <h4>Probabilistic tradeoff</h4>
+        <table>
+          <thead>
+            <tr><th>Metric</th><th class="num">Retire-65</th><th class="num">Retire-67</th><th class="num">Δ</th><th>Read</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Success rate (95)</td><td class="num">91%</td><td class="num">96%</td><td class="num delta-pos">+5pp</td><td class="muted">Bigger buffer + larger SS</td></tr>
+            <tr><td>10th percentile (worst case)</td><td class="num">$0 @ 91</td><td class="num">$210k @ 95</td><td class="num delta-pos">+$210k</td><td class="muted">Tail risk meaningfully reduced</td></tr>
+            <tr><td>Median outcome (95)</td><td class="num">$1.42M</td><td class="num">$1.85M</td><td class="num delta-pos">+$430k</td><td class="muted">Mostly extra SS + Roth</td></tr>
+            <tr><td>Years to depletion (worst 5%)</td><td class="num">26</td><td class="num">30+</td><td class="num delta-pos">+4 years</td><td class="muted">Sequence-of-returns resilience</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DIMENSION: INCOME -->
+    <div class="dim-view" id="dim-income" hidden>
+      <div class="compare-grid">
+        <div class="compare-card card-a">
+          <div class="compare-card-header">
+            <span class="card-marker dot-a"></span>
+            <h3>Retire-65 <span class="muted">· base</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Yr 1-2 cash flow</span><strong>$108k/yr</strong></div>
+            <div class="mini-kpi"><span>SS starts</span><strong>67</strong></div>
+            <div class="mini-kpi"><span>Tax-deferred draws</span><strong>$640k total</strong></div>
+          </div>
+          <div class="mini-chart-label">Income source by year</div>
+          <svg class="mini-chart stacked" viewBox="0 0 400 140" preserveAspectRatio="none">
+            <g class="bars-stack-a"></g>
+          </svg>
+        </div>
+        <div class="compare-card card-b">
+          <div class="compare-card-header">
+            <span class="card-marker dot-b"></span>
+            <h3>Retire-67 <span class="muted">· + SS delay</span></h3>
+          </div>
+          <div class="kpi-row">
+            <div class="mini-kpi"><span>Yr 1-2 cash flow</span><strong class="loser">$54k/yr</strong></div>
+            <div class="mini-kpi"><span>SS starts</span><strong>70</strong></div>
+            <div class="mini-kpi"><span>Tax-deferred draws</span><strong>$980k total</strong></div>
+          </div>
+          <div class="mini-chart-label">Income source by year</div>
+          <svg class="mini-chart stacked" viewBox="0 0 400 140" preserveAspectRatio="none">
+            <g class="bars-stack-b"></g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="legend-row">
+        <span class="legend-item"><span class="swatch" style="background:#01696F"></span> Taxable</span>
+        <span class="legend-item"><span class="swatch" style="background:#4A8B91"></span> Tax-deferred / Roth conv.</span>
+        <span class="legend-item"><span class="swatch" style="background:#A6CDD0"></span> Roth</span>
+        <span class="legend-item"><span class="swatch" style="background:#B8651A"></span> Social Security</span>
+      </div>
+
+      <div class="tradeoff-table">
+        <h4>Cash flow tradeoff</h4>
+        <table>
+          <thead>
+            <tr><th>Period</th><th class="num">Retire-65</th><th class="num">Retire-67</th><th class="num">Δ</th><th>Read</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Years 1-2 (still working in 67)</td><td class="num">$108k/yr</td><td class="num">$162k/yr salary</td><td class="num delta-pos">+$54k/yr</td><td class="muted">Salary continuation</td></tr>
+            <tr><td>Years 3-5 (retired, pre-SS)</td><td class="num">$108k/yr SS+draws</td><td class="num">$104k/yr draws only</td><td class="num delta-neg">−$4k/yr</td><td class="muted">SS gap covered by portfolio</td></tr>
+            <tr><td>Years 6+ (post-SS at 70)</td><td class="num">$112k/yr</td><td class="num">$128k/yr</td><td class="num delta-pos">+$16k/yr</td><td class="muted">+ delayed SS premium</td></tr>
+            <tr><td>Working/saving years</td><td class="num">0</td><td class="num">2 more</td><td class="num delta-pos">+2</td><td class="muted">$340k more contributions+growth</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<script src="compare.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="transform:translate(-${scrollX}px,-${scrollY}px);transform-origin:top left">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>
