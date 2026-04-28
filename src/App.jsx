@@ -1,135 +1,31 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Chart, ArcElement, DoughnutController, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip as ChartTooltip } from 'chart.js';
+Chart.register(ArcElement, DoughnutController, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, ChartTooltip);
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell, LineChart, Line, ReferenceLine } from 'recharts';
 import { TrendingUp, DollarSign, Activity, FileText, Settings, BarChart3, Coins, AlertCircle, CheckCircle, Layers, Grid, Save, RefreshCw, Zap, Plus, Trash2, Edit2, X, MoveRight, Sparkles, Loader, Heart, Target, ArrowDownUp, Calendar } from 'lucide-react';
 import SettingsTab from './components/tabs/Settings';
 import AssetsTab from './components/tabs/Assets';
-import { fetchHoldings, fetchAiInsights } from './api.js';
-
-const RMD_TABLE = {73:26.5,74:25.5,75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2};
-const getRMD = function(age) { return RMD_TABLE[Math.min(age,90)] || 12.2; };
-
-// Returns scheduled Roth conversion amount for a given calendar year
-function rothConvForYear(inp, calYear) {
-  var schedule = {2027:inp.conv2027, 2028:inp.conv2028, 2029:inp.conv2029, 2030:inp.conv2030, 2031:inp.conv2031};
-  return schedule[calYear] || 0;
-}
-
-// v13: SS income for a given calendar year
-// Bug fixes: Scott born Nov 1959, SS start year = birth year + claim age
-// Stacey born Aug 1962, uses actual net figures with toggle
-function ssIncomeForYear(inp, calYear) {
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
-  var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var yourStartYear = 1959 + inp.ssAge; // Scott born 1959
-  var yourSS = 0;
-
-  // Scott always gets partial first year (Nov birthday = 2 months: Nov+Dec)
-  if (calYear === yourStartYear) {
-    yourSS = yourMonthly * 2;
-  } else if (calYear > yourStartYear) {
-    var colaYrs = calYear - yourStartYear;
-    yourSS = yourMonthly * Math.pow(1 + ssCola, colaYrs) * 12;
-  }
-
-  // Stacey SS — actual net figures, respects toggle
-  var spouseSS = 0;
-  if (inp.hasSpouse && !inp.survivorMode) {
-    var staceyClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-    var staceyMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
-    var staceyStartYear = 1962 + staceyClaimAge; // Stacey born 1962
-    if (calYear === staceyStartYear) {
-      spouseSS = staceyMonthly * 5; // Aug birthday = Aug-Dec
-    } else if (calYear > staceyStartYear) {
-      var spColaYrs = calYear - staceyStartYear;
-      spouseSS = staceyMonthly * Math.pow(1 + ssCola, spColaYrs) * 12;
-    }
-  }
-
-  if (inp.survivorMode && inp.hasSpouse) return yourSS;
-  return yourSS + spouseSS;
-}
-
-// v13: Scott's SS only (for cash flow table breakdown)
-function scottSSForYear(inp, calYear) {
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
-  var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var yourStartYear = 1959 + inp.ssAge;
-  if (calYear === yourStartYear) return yourMonthly * 2;
-  if (calYear > yourStartYear) return yourMonthly * Math.pow(1 + ssCola, calYear - yourStartYear) * 12;
-  return 0;
-}
-
-// v13: Stacey's SS only (for cash flow table breakdown)
-function staceySSForYear(inp, calYear) {
-  if (!inp.hasSpouse || inp.survivorMode) return 0;
-  var ssCola = (inp.ssCola || 2.5) / 100;
-  var staceyClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-  var staceyMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
-  var staceyStartYear = 1962 + staceyClaimAge;
-  if (calYear === staceyStartYear) return staceyMonthly * 5;
-  if (calYear > staceyStartYear) return staceyMonthly * Math.pow(1 + ssCola, calYear - staceyStartYear) * 12;
-  return 0;
-}
-
-const MFJ = [[23200,0.10],[94300,0.12],[201050,0.22],[383900,0.24],[487450,0.32],[731200,0.35],[1e12,0.37]];
-const SGL = [[11600,0.10],[47150,0.12],[100525,0.22],[191950,0.24],[243725,0.32],[609350,0.35],[1e12,0.37]];
-const STD_DED = {married:29200,single:14600};
-
-// v12: resolve filing status — survivorMode overrides to single
-function resolveStatus(inp) {
-  return inp.survivorMode ? 'single' : (inp.filingStatus || 'married');
-}
-
-function marginalRate(gross, status) {
-  var ded = STD_DED[status] || 29200;
-  var taxable = Math.max(0, gross - ded);
-  var brackets = status === 'married' ? MFJ : SGL;
-  var rate = 0.10;
-  for (var bi = 0; bi < brackets.length; bi++) {
-    if (taxable <= brackets[bi][0]) { rate = brackets[bi][1]; break; }
-    rate = brackets[bi][1];
-  }
-  return rate;
-}
-
-function effectiveTax(gross, status) {
-  var ded = STD_DED[status] || 29200;
-  var taxable = Math.max(0, gross - ded);
-  var brackets = status === 'married' ? MFJ : SGL;
-  var tax = 0; var prev = 0;
-  for (var bi = 0; bi < brackets.length; bi++) {
-    if (taxable <= prev) break;
-    tax += (Math.min(taxable, brackets[bi][0]) - prev) * brackets[bi][1];
-    prev = brackets[bi][0];
-  }
-  return tax;
-}
-
-// v12: Total tax including AZ state (applies to non-SS taxable income)
-function totalTaxWithState(gross, status, stateTaxRate, ssIncome) {
-  var fedTax = effectiveTax(gross, status);
-  // AZ flat tax applies to taxable income minus SS (AZ doesn't tax SS)
-  var stateGross = Math.max(0, gross - (ssIncome || 0));
-  var stateDed = STD_DED[status] || 29200;
-  var stateTaxable = Math.max(0, stateGross - stateDed);
-  var stateTax = stateTaxable * (stateTaxRate / 100);
-  return fedTax + stateTax;
-}
-
-// v12: Combined marginal rate (federal + state)
-function combinedMarginalRate(gross, status, stateTaxRate) {
-  return marginalRate(gross, status) + (stateTaxRate / 100);
-}
-
-function capeBased(cape, tenYr, tips) {
-  return {
-    stock: (1/cape) + 0.02,
-    bond: tenYr/100,
-    inflation: Math.max(0.015, tenYr/100 - tips/100)
-  };
-}
+import { fetchHoldings, fetchAiInsights as apiFetchAiInsights } from './api.js';
+import { RMD_TABLE, getRMD, MFJ, SGL, STD_DED, ASSET_TYPES, RISK_LEVELS, ACCOUNT_TYPES, RISK_C, TYPE_C, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, DEFAULTS } from './engine/constants.js';
+import { resolveStatus, marginalRate, effectiveTax, totalTaxWithState, combinedMarginalRate, capeBased } from './engine/tax.js';
+import { ssBenefitFactor, ssIncomeForYear, scottSSForYear, staceySSForYear } from './engine/social-security.js';
+import { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from './engine/roth.js';
+import { buildCashFlow } from './engine/cashflow.js';
+import { runMonteCarlo } from './engine/montecarlo.js';
+import { flattenPlan, buildPlan } from './data/planAdapter.js';
+import { saveAllDurable, saveProfile, saveSocialSecurity, saveRothPlan, saveHealthcare, saveExpenses, saveQCD } from './data/domainSave.js';
+import MonteCarloTab    from './components/tabs/MonteCarlo.jsx';
+import CashFlowTab      from './components/tabs/CashFlow.jsx';
+import RothConversionsTab from './components/tabs/RothConversions.jsx';
+import SCENARIO_PRESETS from './data/scenarioPresets.js';
+import PortfolioPage from './components/tabs/PortfolioPage.jsx';
+import SpendingTab from './components/tabs/SpendingTab.jsx';
+import AppShell from './components/shell/AppShell.jsx';
+import Sidebar from './components/shell/Sidebar.jsx';
+import AIInsightsRail from './components/shell/AIInsightsRail.jsx';
+import OverviewPage from './components/overview/OverviewPage.jsx';
+import OnboardingWizard from './components/onboarding/OnboardingWizard.jsx';
+import { useAuth } from './context/AuthContext.jsx';
 
 function fmtC(v) {
   if (!v && v !== 0) return '$0';
@@ -139,96 +35,6 @@ function fmtC(v) {
 }
 function fmtFull(v) { return '$' + Math.round(v||0).toLocaleString(); }
 function fmtPct(v) { return (v*100).toFixed(1) + '%'; }
-
-// ── Available options for dropdowns ───────────────────────────────────────────
-var ASSET_TYPES = ['Cash','CD','T-Bill','TIPS','Dividend ETF','REIT ETF','Equity ETF','Intl Equity','Growth Stocks','Equity','Bond','I-Bond','Annuity','Other'];
-var RISK_LEVELS = ['Low','Medium','Med-High','High'];
-var ACCOUNT_TYPES = ['Taxable','IRA','Roth IRA','Roth 401k','401k','HSA'];
-
-var RISK_C = {Low:'#34d399',Medium:'#60a5fa','Med-High':'#fbbf24',High:'#f87171'};
-var TYPE_C = {Cash:'#34d399',CD:'#2dd4bf','T-Bill':'#22d3ee',TIPS:'#60a5fa','Dividend ETF':'#fbbf24','REIT ETF':'#fb923c','Equity ETF':'#f97316','Intl Equity':'#e879f9','Growth Stocks':'#a78bfa',Equity:'#818cf8',Bond:'#60a5fa','I-Bond':'#34d399',Annuity:'#f59e0b',Other:'#94a3b8'};
-
-// ── Default asset holdings (editable) ─────────────────────────────────────────
-var DEFAULT_ASSETS = [
-  // account: 'Taxable' | 'IRA' | 'Roth IRA' | 'Roth 401k'
-  // bucket: 1 | 2 | 3 | null (unassigned)
-  {id:'a1', name:'Money Market',          amount:33000,  type:'Cash',         account:'Taxable',  maturity:'Liquid',        yld:'~4.5%',      risk:'Low',     bucket:1},
-  {id:'a2', name:'CD',                    amount:50000,  type:'CD',           account:'Taxable',  maturity:'Aug 2026',      yld:'~5.0%',      risk:'Low',     bucket:1},
-  {id:'a3', name:'Money Market (IRA)',    amount:1000,   type:'Cash',         account:'IRA',      maturity:'Liquid',        yld:'~4.5%',      risk:'Low',     bucket:1},
-  {id:'a4', name:'CD (Aug 2026)',         amount:25000,  type:'CD',           account:'IRA',      maturity:'Aug 2026',      yld:'~5.0%',      risk:'Low',     bucket:1},
-  {id:'a5', name:'CD (Jan 2027)',         amount:25000,  type:'CD',           account:'IRA',      maturity:'Jan 2027',      yld:'~5.0%',      risk:'Low',     bucket:1},
-  {id:'a6', name:'CD (Aug 2027)',         amount:25000,  type:'CD',           account:'IRA',      maturity:'Aug 2027',      yld:'~5.0%',      risk:'Low',     bucket:1},
-  {id:'a7', name:'T-Bills (5 tranches)', amount:100000, type:'T-Bill',       account:'IRA',      maturity:'Jan 27-Jan 28', yld:'~4.8%',      risk:'Low',     bucket:1},
-  {id:'a8', name:'TIPS (Apr 2028)',       amount:107000, type:'TIPS',         account:'IRA',      maturity:'Apr 2028',      yld:'Real +1.8%', risk:'Low',     bucket:2},
-  {id:'a9', name:'TIPS (Jul 2031)',       amount:103000, type:'TIPS',         account:'IRA',      maturity:'Jul 2031',      yld:'Real +1.8%', risk:'Low',     bucket:2},
-  {id:'a10',name:'TIPS (Jul 2034)',       amount:105000, type:'TIPS',         account:'IRA',      maturity:'Jul 2034',      yld:'Real +1.8%', risk:'Low',     bucket:2},
-  {id:'a11',name:'SCHD',                 amount:192000, type:'Dividend ETF', account:'IRA',      maturity:'Ongoing',       yld:'~3.8%',      risk:'Medium',  bucket:2},
-  {id:'a12',name:'VNQ',                  amount:62000,  type:'REIT ETF',     account:'IRA',      maturity:'Ongoing',       yld:'~3.8%',      risk:'Medium',  bucket:2},
-  {id:'a13',name:'VTI',                  amount:211000, type:'Equity ETF',   account:'IRA',      maturity:'Ongoing',       yld:'Growth',     risk:'Medium',  bucket:3},
-  {id:'a14',name:'VXUS',                 amount:190000, type:'Intl Equity',  account:'IRA',      maturity:'Ongoing',       yld:'Growth',     risk:'Med-High',bucket:3},
-  {id:'a15',name:'VTI (Roth IRA)',       amount:347000, type:'Equity ETF',   account:'Roth IRA', maturity:'Ongoing',       yld:'Growth',     risk:'Medium',  bucket:3},
-  {id:'a16',name:'VXUS (Roth IRA)',      amount:69000,  type:'Intl Equity',  account:'Roth IRA', maturity:'Ongoing',       yld:'Growth',     risk:'Med-High',bucket:3},
-  {id:'a17',name:'VTI (Roth 401k)',      amount:2800,   type:'Equity ETF',   account:'Roth 401k',maturity:'Ongoing',       yld:'Growth',     risk:'Medium',  bucket:3},
-  {id:'a18',name:'VXUS (Roth 401k)',     amount:700,    type:'Intl Equity',  account:'Roth 401k',maturity:'Ongoing',       yld:'Growth',     risk:'Med-High',bucket:3},
-];
-
-// ── Default bucket config ──────────────────────────────────────────────────────
-var DEFAULT_BUCKET_CONFIG = [
-  {id:1, label:'Bucket 1', sub:'Short-Term (Years 1-3)', target:259000, color:'#34d399', bg:'rgba(52,211,153,0.06)', border:'rgba(52,211,153,0.25)', purpose:'Cash buffer - cover expenses without selling investments during market downturns.', risk:'Capital Preservation', strategy:'Refill annually from dividends and income. Never sell equities during bear markets.'},
-  {id:2, label:'Bucket 2', sub:'Medium-Term (Years 4-10)', target:569000, color:'#60a5fa', bg:'rgba(96,165,250,0.06)', border:'rgba(96,165,250,0.25)', purpose:'Income bridge with inflation protection. SCHD+VNQ dividends ~$9K/yr refill Bucket 1.', risk:'Income + Moderate Growth', strategy:'TIPS mature in sequence. Dividends flow automatically to Bucket 1.'},
-  {id:3, label:'Bucket 3', sub:'Long-Term (Years 11+)', target:820500, color:'#a78bfa', bg:'rgba(167,139,250,0.06)', border:'rgba(167,139,250,0.25)', purpose:'Maximum growth. VTI + VXUS across IRA, Roth IRA, and Roth 401k. Tax-free Roth compounding with no RMDs.', risk:'Long-Term Growth', strategy:'Untouched for 11+ years. Rebalance into Bucket 2 after strong market years.'},
-];
-
-var DEFAULTS = {
-  currentAge:66, retirementAge:67, lifeExpectancy:90,
-  taxableBal:83000,
-  iraBalCash:176000,
-  iraBalTips:315000,
-  iraBalDividend:254000,
-  iraBalGrowth:401000,
-  rothBal:419500,
-  monthlyExpenses:8000,
-  inflationRate:3.0,
-  ssCola:2.5,  // v12: separate SS COLA rate (%)
-  ssAge:70,    // v13: delay to 70 confirmed as best strategy
-  ssFRA:3445,  // v12: actual FRA (age 67) PIA from SSA — the true base
-  ssMonthly:3445,  // FRA PIA; actual benefit computed via ssBenefitFactor(ssAge)
-  spouseCurrentAge:63,  // v12: spouse actual age (turns 64 in 2026)
-  spouseSSAge:67,
-  spouseSSMonthly:1879,  // v13: Stacey's actual net at FRA 67 (after ~15% garnishment)
-  spouseSSAt63:1472,     // v13: Stacey's actual net at 63 (after garnishment)
-  spouseSSAt67:1879,     // v13: Stacey's actual net at 67 (after garnishment)
-  spouseSSIsSpousal:false,  // v13: use actual net figures, not spousal calc
-  staceySS63:false,      // v13: toggle — true = claim at 63, false = wait to 67
-  hasSpouse:true,
-  pensionMonthly:0, pensionStartAge:67,
-  partTimeIncome:0, partTimeYears:0,
-  extraSpend2027:0,
-  extraSpend2028:0,
-  severanceNet:0,        // v13: net severance check — adds to Taxable opening balance
-  // Per-year Roth conversion schedule
-  conv2027:100000, conv2028:100000, conv2029:100000,
-  conv2030:50000, conv2031:50000,
-  qcdAmount:15000, qcdStartAge:70,
-  filingStatus:'married',
-  survivorMode:false,  // v12: toggle for Single filing (widow's penalty)
-  stateTaxRate:2.5,    // v12: Arizona flat rate (%) — applies to IRA/conv/RMD, not SS
-  healthPhase1Annual:27896,
-  healthPhase1EndAge:68,
-  healthPhase2Annual:14873,
-  healthInflation:0.05,
-  cashReturnRate:4.8,
-  tipsRealReturn:1.8,
-  dividendReturnRate:6.0,
-  growthReturnRate:7.0,
-  rothReturnRate:7.0,  // v13: same as growth (both VTI+VXUS)
-  capeRatio:28.5, tenYrTreasury:4.2, tipsYield:1.8,
-  stockVol:18.0, bondVol:6.0, correlation:0.15,
-  housingMonthly:2200, foodMonthly:1200, transportMonthly:600, travelMonthly:1200, otherMonthly:2800,
-  legacyGoal:500000,
-  trackingYear:2026,
-  spendYear:2026
-};
 
 var PF = "'Playfair Display', serif";
 var SS_FONT = "'Source Sans 3', sans-serif";
@@ -247,14 +53,6 @@ var ACCENT2  = '#d1fae5';       // light emerald tint
 var SHADOW   = '0 2px 6px rgba(0,0,0,.15), 0 4px 20px rgba(0,0,0,.12)';
 
 var CARD = {background:SURFACE, border:'1px solid '+BORDER, borderRadius:12, padding:20, boxShadow:SHADOW, color:TXT1};
-
-function ssBenefitFactor(claimAge) {
-  var fra = 67;
-  if (claimAge <= 62) return 0.70;
-  if (claimAge < fra) return 1 - 0.0667 * (fra - claimAge);
-  if (claimAge > fra) return 1 + 0.08 * (claimAge - fra);
-  return 1.0;
-}
 
 function projectForSsAge(inp, er, ssClaimAge) {
   var taxable = inp.taxableBal;
@@ -495,11 +293,549 @@ function newAsset() {
   return { id: 'a' + Date.now(), name: '', amount: 0, type: 'Cash', account: 'IRA', maturity: 'Ongoing', yld: '', risk: 'Medium', bucket: null };
 }
 
-export default function RetireStrongPlanner() {
-  var tabState = useState('summary');
+// ── Dashboard helper: draw a semicircle gas gauge on a canvas ──────────────
+function drawGauge(canvas, pct, color) {
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var W = 110, H = 66;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+  var cx = W / 2, cy = H - 6, r = 44;
+  // Track
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0);
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.stroke();
+  // Fill (cap at 110% visually)
+  var fill = Math.min(pct, 1.1);
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI * (1 + fill), false);
+  ctx.strokeStyle = color; ctx.lineWidth = 11; ctx.lineCap = 'round'; ctx.stroke();
+  // Label
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(pct * 100) + '%', cx, cy - 18);
+}
+
+// ── DashboardTab component ────────────────────────────────────────────────
+function DashboardTab(props) {
+  var derivedTotals = props.derivedTotals;
+  var bucketCfg = props.bucketCfg;
+  var totalPort = props.totalPort;
+  var assets = props.assets;
+  var successRate = props.successRate;
+  var mcPercentiles = props.mcPercentiles;
+  var cashFlow = props.cashFlow;
+  var inp = props.inp;
+  var dataSource = props.dataSource;
+  var setActiveTab = props.setActiveTab;
+
+  // Canvas refs
+  var donutRef = useRef(null);
+  var gauge1Ref = useRef(null);
+  var gauge2Ref = useRef(null);
+  var gauge3Ref = useRef(null);
+  var mcRef = useRef(null);
+  var cfRef = useRef(null);
+  var donutChartRef = useRef(null);
+  var mcChartRef = useRef(null);
+  var cfChartRef = useRef(null);
+
+  // Asset class totals from actual holdings
+  var byClass = useMemo(function() {
+    var cash = 0, tips = 0, div = 0, equity = 0, intl = 0;
+    assets.forEach(function(a) {
+      var t = a.type || '';
+      if (t === 'Cash' || t === 'CD' || t === 'T-Note' || t === 'T-Bill' || t === 'I-Bond') cash += a.amount;
+      else if (t === 'TIPS' || t === 'Bond ETF') tips += a.amount;
+      else if (t === 'Dividend ETF' || t === 'REIT ETF') div += a.amount;
+      else if (t === 'Equity ETF') equity += a.amount;
+      else if (t === 'Intl Equity') intl += a.amount;
+    });
+    return { cash, tips, div, equity, intl };
+  }, [assets]);
+
+  // Account totals
+  var byAccount = useMemo(function() {
+    var taxable = 0, ira = 0, roth = 0;
+    assets.forEach(function(a) {
+      var acct = a.account || '';
+      if (acct === 'Taxable') taxable += a.amount;
+      else if (acct === 'IRA') ira += a.amount;
+      else if (acct === 'Roth IRA' || acct === 'Roth 401k') roth += a.amount;
+    });
+    return { taxable, ira, roth };
+  }, [assets]);
+
+  // Bucket targets from bucketCfg
+  var b1cfg = bucketCfg.find(function(b) { return b.id === 1; }) || { target: 259000 };
+  var b2cfg = bucketCfg.find(function(b) { return b.id === 2; }) || { target: 569000 };
+  var b3cfg = bucketCfg.find(function(b) { return b.id === 3; }) || { target: 820500 };
+  var b1actual = assets.filter(function(a) { return a.bucket === 1; }).reduce(function(s, a) { return s + a.amount; }, 0);
+  var b2actual = assets.filter(function(a) { return a.bucket === 2; }).reduce(function(s, a) { return s + a.amount; }, 0);
+  var b3actual = assets.filter(function(a) { return a.bucket === 3; }).reduce(function(s, a) { return s + a.amount; }, 0);
+  var b1pct = b1cfg.target > 0 ? b1actual / b1cfg.target : 0;
+  var b2pct = b2cfg.target > 0 ? b2actual / b2cfg.target : 0;
+  var b3pct = b3cfg.target > 0 ? b3actual / b3cfg.target : 0;
+
+  // IRMAA / tax calcs for current year
+  var currentMagi = useMemo(function() {
+    var ss = ssIncomeForYear(inp, 2026) * 0.85;
+    var ira = Math.max(0, inp.monthlyExpenses * 12 - ssIncomeForYear(inp, 2026));
+    return Math.round(ss + ira);
+  }, [inp]);
+  var irmaaLimit = 212000;
+  var irmaaHeadroom = Math.max(0, irmaaLimit - currentMagi);
+  var irmaaSafe = currentMagi < irmaaLimit;
+
+  // Cash flow year cards (first two years)
+  var cf2026 = cashFlow.find(function(r) { return r.year === 2026; });
+  var cf2027 = cashFlow.find(function(r) { return r.year === 2027; });
+
+  // Monthly withdrawal decision
+  var monthlyNeed = inp.monthlyExpenses;
+  var monthlyHC = Math.round((inp.healthPhase1Annual || 27896) / 12);
+  var monthlyTotal = monthlyNeed + monthlyHC;
+  var spaxx = assets.find(function(a) { return a.name && a.name.includes('SPAXX') && a.account === 'Taxable'; });
+  var spaxxBal = spaxx ? Math.round(spaxx.amount) : 33589;
+
+  // Success rate color
+  var srNum = parseFloat(successRate);
+  var srColor = srNum >= 85 ? '#059669' : srNum >= 75 ? '#f59e0b' : '#e24b4a';
+  var srBg = srNum >= 85 ? '#fff7ed' : srNum >= 75 ? '#fef3c7' : '#fff1f2';
+  var srBorder = srNum >= 85 ? '#fed7aa' : srNum >= 75 ? '#fde68a' : '#fecdd3';
+
+  function fmtK(v) { return '$' + (v >= 1000000 ? (v / 1000000).toFixed(2) + 'M' : v >= 1000 ? Math.round(v / 1000) + 'K' : Math.round(v)); }
+  function pillStyle(type) {
+    if (type === 'green') return { display:'inline-block', fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20, background:'#d1fae5', color:'#065f46' };
+    if (type === 'amber') return { display:'inline-block', fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20, background:'#fef3c7', color:'#92400e' };
+    if (type === 'red')   return { display:'inline-block', fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20, background:'#fee2e2', color:'#991b1b' };
+    if (type === 'blue')  return { display:'inline-block', fontSize:10, fontWeight:500, padding:'2px 7px', borderRadius:20, background:'#dbeafe', color:'#1e40af' };
+    return {};
+  }
+
+  // Draw donut chart
+  useEffect(function() {
+    if (!donutRef.current) return;
+    var ex = Chart.getChart(donutRef.current); if (ex) ex.destroy();
+    if (donutChartRef.current) { donutChartRef.current.destroy(); donutChartRef.current = null; }
+    donutChartRef.current = new Chart(donutRef.current, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [byClass.cash, byClass.tips, byClass.div, byClass.equity, byClass.intl],
+          backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#f97316', '#ec4899'],
+          borderWidth: 3, borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true, cutout: '65%',
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return ' ' + fmtK(c.parsed); } } } }
+      }
+    });
+    return function() { if (donutChartRef.current) { donutChartRef.current.destroy(); donutChartRef.current = null; } };
+  }, [byClass]);
+
+  // Draw gauge canvases
+  useEffect(function() {
+    drawGauge(gauge1Ref.current, b1pct, '#10b981');
+    drawGauge(gauge2Ref.current, b2pct, '#059669');
+    drawGauge(gauge3Ref.current, b3pct, '#0d9488');
+  }, [b1pct, b2pct, b3pct]);
+
+  // Draw Monte Carlo fan chart
+  useEffect(function() {
+    if (!mcRef.current || !mcPercentiles) return;
+    var ex = Chart.getChart(mcRef.current); if (ex) ex.destroy();
+    if (mcChartRef.current) { mcChartRef.current.destroy(); mcChartRef.current = null; }
+    var gridC = 'rgba(0,0,0,0.06)', txtC = '#64748b';
+    mcChartRef.current = new Chart(mcRef.current, {
+      type: 'line',
+      data: {
+        labels: mcPercentiles.labels,
+        datasets: [
+          { data: mcPercentiles.p90, fill: false, borderColor: 'transparent', pointRadius: 0, tension: 0.4 },
+          { data: mcPercentiles.p75, fill: '-1', backgroundColor: 'rgba(139,92,246,0.22)', borderColor: 'transparent', pointRadius: 0, tension: 0.4 },
+          { data: mcPercentiles.p50, fill: '-1', backgroundColor: 'rgba(99,102,241,0.18)', borderColor: 'transparent', pointRadius: 0, tension: 0.4 },
+          { label: 'Median', data: mcPercentiles.p50, fill: false, borderColor: '#10b981', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+          { data: mcPercentiles.p25, fill: false, borderColor: 'transparent', pointRadius: 0, tension: 0.4 },
+          { data: mcPercentiles.p10, fill: '-1', backgroundColor: 'rgba(226,75,74,0.15)', borderColor: 'transparent', pointRadius: 0, tension: 0.4 },
+          { label: '25th', data: mcPercentiles.p25, fill: false, borderColor: '#f97316', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, tension: 0.4 },
+          { label: '10th', data: mcPercentiles.p10, fill: false, borderColor: '#e24b4a', borderWidth: 1.5, pointRadius: 0, tension: 0.4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: function(c) { if (['Median', '25th', '10th'].includes(c.dataset.label)) return c.dataset.label + ': $' + c.parsed.y + 'K'; return null; } } } },
+        scales: {
+          x: { grid: { color: gridC }, ticks: { color: txtC, font: { size: 9 } }, title: { display: true, text: 'Age', color: txtC, font: { size: 9 } } },
+          y: { grid: { color: gridC }, ticks: { color: txtC, font: { size: 9 }, callback: function(v) { return '$' + v + 'K'; } }, min: 0 }
+        }
+      }
+    });
+    return function() { if (mcChartRef.current) { mcChartRef.current.destroy(); mcChartRef.current = null; } };
+  }, [mcPercentiles]);
+
+  // Draw cash flow chart
+  useEffect(function() {
+    if (!cfRef.current || !cashFlow || cashFlow.length === 0) return;
+    var ex = Chart.getChart(cfRef.current); if (ex) ex.destroy();
+    if (cfChartRef.current) { cfChartRef.current.destroy(); cfChartRef.current = null; }
+    var gridC = 'rgba(0,0,0,0.06)', txtC = '#64748b';
+    var labels = cashFlow.map(function(r) { return String(r.year); });
+    var iraData = cashFlow.map(function(r) { return Math.round(r.iraBalance / 1000); });
+    var rothData = cashFlow.map(function(r) { return Math.round(r.rothBalance / 1000); });
+    var expData = cashFlow.map(function(r) { return Math.round(r.expenses / 1000); });
+    var totalData = cashFlow.map(function(r) { return Math.round(r.balance / 1000); });
+    cfChartRef.current = new Chart(cfRef.current, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Expenses', data: expData, borderColor: '#e24b4a', borderWidth: 1.5, fill: false, pointRadius: 0, tension: 0.4 },
+          { label: 'IRA', data: iraData, borderColor: '#6366f1', borderWidth: 2, fill: false, pointRadius: 0, tension: 0.4 },
+          { label: 'Roth', data: rothData, borderColor: '#8b5cf6', borderWidth: 1.5, fill: true, backgroundColor: 'rgba(139,92,246,0.07)', pointRadius: 0, tension: 0.4 },
+          { label: 'Total', data: totalData, borderColor: '#10b981', borderWidth: 2.5, fill: false, pointRadius: 0, tension: 0.4 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: function(c) { return c.dataset.label + ': $' + c.parsed.y + 'K'; } } } },
+        scales: {
+          x: { grid: { color: gridC }, ticks: { color: txtC, font: { size: 9 }, maxTicksLimit: 8, autoSkip: true } },
+          y: { grid: { color: gridC }, ticks: { color: txtC, font: { size: 9 }, callback: function(v) { return '$' + v + 'K'; } }, min: 0 }
+        }
+      }
+    });
+    return function() { if (cfChartRef.current) { cfChartRef.current.destroy(); cfChartRef.current = null; } };
+  }, [cashFlow]);
+
+  var card = { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '13px 15px' };
+  var lbl = { fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#64748b', margin: '0 0 7px' };
+
+  return (
+    <div style={{ fontFamily: "'Source Sans 3', sans-serif" }}>
+
+      {/* ── Header bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <span style={{ fontSize: 17, fontWeight: 600, color: '#0f172a' }}>Dashboard</span>
+          <span style={{ fontSize: 11, color: '#64748b' }}>Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={pillStyle('green')}>{dataSource === 'database' ? 'Live from DB' : 'Offline defaults'}</span>
+        </div>
+      </div>
+
+      {/* ── ROW 1: Asset donut + Bucket gauges ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.5fr)', gap: 10, marginBottom: 10 }}>
+
+        {/* Asset class donut */}
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+            <p style={lbl}>Portfolio composition</p>
+            <span style={{ fontSize: 17, fontWeight: 600, color: '#059669' }}>{fmtK(totalPort)}</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 8 }}>{assets.length} holdings · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div style={{ width: 110, height: 110, flexShrink: 0 }}>
+              <canvas ref={donutRef} style={{ width: '100%', height: '100%' }} />
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[
+                ['Cash & Near-Cash', byClass.cash, '#10b981'],
+                ['TIPS / Inflation', byClass.tips, '#6366f1'],
+                ['Dividend / REIT', byClass.div, '#f59e0b'],
+                ['Equity ETF', byClass.equity, '#f97316'],
+                ['International', byClass.intl, '#ec4899'],
+              ].map(function(item) {
+                return (
+                  <div key={item[0]} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: item[2], display: 'inline-block', flexShrink: 0 }}></span>
+                      {item[0]}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{fmtK(item[1])}</span>
+                  </div>
+                );
+              })}
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 4, marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, color: '#64748b' }}>IRA {fmtK(byAccount.ira)}</span>
+                <span style={{ fontSize: 10, color: '#64748b' }}>Roth {fmtK(byAccount.roth)}</span>
+                <span style={{ fontSize: 10, color: '#64748b' }}>Taxable {fmtK(byAccount.taxable)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bucket gas gauges */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <p style={{ ...lbl, margin: 0 }}>Bucket health — vs targets</p>
+            <span style={{ fontSize: 10, color: '#64748b' }}>Bear rule active · use B1 only</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 10, marginBottom: 8 }}>
+            {[
+              { label: 'B1 · Cash', ref: gauge1Ref, actual: b1actual, target: b1cfg.target, pct: b1pct, color: '#10b981', sub: Math.round(b1actual / (inp.monthlyExpenses * 12 + (inp.healthPhase1Annual || 27896)) * 10) / 10 + ' yrs' },
+              { label: 'B2 · Income', ref: gauge2Ref, actual: b2actual, target: b2cfg.target, pct: b2pct, color: '#059669', sub: 'SCHD sweeping' },
+              { label: 'B3 · Growth', ref: gauge3Ref, actual: b3actual, target: b3cfg.target, pct: b3pct, color: '#0d9488', sub: 'VTI + VXUS' },
+            ].map(function(g) {
+              var pillType = g.pct >= 0.9 ? 'green' : g.pct >= 0.75 ? 'amber' : 'red';
+              return (
+                <div key={g.label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{g.label}</div>
+                  <canvas ref={g.ref} style={{ display: 'block', margin: '0 auto' }} />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{fmtK(g.actual)}</div>
+                  <div style={{ fontSize: 10, color: '#64748b' }}>target {fmtK(g.target)}</div>
+                  <span style={{ ...pillStyle(pillType), marginTop: 4, display: 'inline-block' }}>{Math.round(g.pct * 100)}%</span>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>{g.sub}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: '#991b1b', background: '#fee2e2', borderRadius: 6, padding: '6px 10px' }}>
+            Bear market rule active — draw from B1 cash only. Do not sell B2/B3 equity in down market.
+          </div>
+        </div>
+      </div>
+
+      {/* ── ROW 2: Monte Carlo + Tax/IRMAA ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.7fr) minmax(0,1fr)', gap: 10, marginBottom: 10 }}>
+
+        {/* Monte Carlo */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <p style={{ ...lbl, margin: 0 }}>Monte Carlo simulation</p>
+          </div>
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 7 }}>500 simulations · bucket strategy · market-condition-aware</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 6, marginBottom: 8 }}>
+            {[
+              { val: successRate + '%', label: 'Success rate', bg: srBg, border: srBorder, color: srColor },
+              { val: cf2026 ? fmtK(cashFlow[Math.floor(cashFlow.length / 2)].balance) : '—', label: 'Median final', bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+              { val: mcPercentiles ? fmtK(mcPercentiles.p90[mcPercentiles.p90.length - 1] * 1000) : '—', label: '90th pct', bg: '#faf5ff', border: '#e9d5ff', color: '#7c3aed' },
+              { val: mcPercentiles ? fmtK(mcPercentiles.p10[mcPercentiles.p10.length - 1] * 1000) : '—', label: '10th pct', bg: '#fff1f2', border: '#fecdd3', color: '#e11d48' },
+            ].map(function(t) {
+              return (
+                <div key={t.label} style={{ background: t.bg, border: '1px solid ' + t.border, borderRadius: 8, padding: '7px 9px' }}>
+                  <div style={{ fontSize: 17, fontWeight: 600, color: t.color }}>{t.val}</div>
+                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: t.color, opacity: 0.7, marginTop: 1 }}>{t.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ position: 'relative', height: 148 }}>
+            <canvas ref={mcRef} />
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+            {[['#e24b4a','10th %ile'],['#f97316','25th %ile'],['#6366f1','75th %ile'],['#8b5cf6','90th %ile'],['#10b981','Median']].map(function(d) {
+              return <span key={d[1]} style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: d[0], display: 'inline-block' }}></span>{d[1]}</span>;
+            })}
+          </div>
+          <button onClick={function() { setActiveTab('monte'); }} style={{ marginTop: 6, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 6, border: '1px solid #e2e8f0', background: 'transparent', color: '#64748b' }}>Explore Monte Carlo tab →</button>
+        </div>
+
+        {/* Tax / IRMAA */}
+        <div style={{ ...card, border: '1px solid #6ee7b7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <p style={{ ...lbl, margin: 0 }}>Tax &amp; IRMAA · {new Date().getFullYear()}</p>
+            <span style={pillStyle(irmaaSafe ? 'green' : 'red')}>{irmaaSafe ? 'Safe zone' : 'IRMAA risk'}</span>
+          </div>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ display: 'flex', height: 16, borderRadius: 5, overflow: 'hidden' }}>
+              <div style={{ width: '14%', background: '#bbf7d0' }}></div>
+              <div style={{ width: '24%', background: '#34d399' }}></div>
+              <div style={{ width: '22%', background: '#059669' }}></div>
+              <div style={{ width: '20%', background: '#0f766e' }}></div>
+              <div style={{ width: '20%', background: '#d1d5db' }}></div>
+            </div>
+            <div style={{ display: 'flex', fontSize: 9, color: '#64748b', marginTop: 2, justifyContent: 'space-between' }}>
+              <span>10%</span><span>12%</span><span>22%</span><span>24%</span><span>32%+</span>
+            </div>
+          </div>
+          <div style={{ position: 'relative', height: 22, marginBottom: 8 }}>
+            <div style={{ position: 'absolute', left: '29%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 2, height: 12, background: '#1e293b', borderRadius: 1 }}></div>
+              <span style={{ fontSize: 9, fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', marginTop: 1 }}>You {fmtK(currentMagi)}</span>
+            </div>
+            <div style={{ position: 'absolute', left: '73%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 2, height: 12, background: '#e24b4a', borderRadius: 1, opacity: 0.7 }}></div>
+              <span style={{ fontSize: 9, color: '#991b1b', whiteSpace: 'nowrap', marginTop: 1 }}>IRMAA $212K</span>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+            {[
+              { label: 'Est. MAGI', val: fmtK(currentMagi), color: '#0f172a' },
+              { label: 'Headroom', val: fmtK(irmaaHeadroom), color: '#059669' },
+              { label: 'Bracket', val: '22% fed', color: '#0f172a' },
+              { label: '2027 conv.', val: '$100K fits', color: '#059669' },
+            ].map(function(t) {
+              return (
+                <div key={t.label} style={{ background: '#f8fafc', borderRadius: 7, padding: '7px 9px' }}>
+                  <div style={{ fontSize: 9, color: '#64748b' }}>{t.label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: t.color }}>{t.val}</div>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={function() { setActiveTab('roth'); }} style={{ marginTop: 8, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 6, border: '1px solid #e2e8f0', background: 'transparent', color: '#64748b', width: '100%' }}>Optimize 2027 conversion →</button>
+        </div>
+      </div>
+
+      {/* ── ROW 3: Cash flow + Monthly withdrawal ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr)', gap: 10, marginBottom: 10 }}>
+
+        {/* Cash flow mini chart */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <p style={{ ...lbl, margin: 0 }}>Cash flow projection · 2026–{2026 + (inp.lifeExpectancy - inp.currentAge)}</p>
+            <button onClick={function() { setActiveTab('cashflow'); }} style={{ fontSize: 10, padding: '3px 8px', cursor: 'pointer', borderRadius: 5, border: '1px solid #e2e8f0', background: 'transparent', color: '#64748b' }}>Full tab →</button>
+          </div>
+          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 6 }}>IRA · Roth · Total balance trajectories to age {inp.lifeExpectancy}</div>
+          <div style={{ position: 'relative', height: 130 }}>
+            <canvas ref={cfRef} />
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 5 }}>
+            {[['#e24b4a','Expenses'],['#6366f1','IRA'],['#8b5cf6','Roth'],['#10b981','Total']].map(function(d) {
+              return <span key={d[1]} style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: d[0], display: 'inline-block' }}></span>{d[1]}</span>;
+            })}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginTop: 8 }}>
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1d4ed8' }}>2026</span>
+                <span style={{ fontSize: 10, color: '#64748b' }}>Age {inp.currentAge}</span>
+              </div>
+              <div style={{ fontSize: 10, color: '#374151', marginTop: 3, lineHeight: 1.5 }}>No conversion. W-2 fills bracket. Fund gap from B1 cash.</div>
+            </div>
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#d97706' }}>2027</span>
+                <span style={{ fontSize: 10, color: '#64748b' }}>Age {inp.currentAge + 1}</span>
+              </div>
+              <div style={{ fontSize: 10, color: '#374151', marginTop: 3, lineHeight: 1.5 }}>Prime conversion year. $100K at 22%. MAGI under $212K.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly withdrawal decision */}
+        <div style={{ ...card, border: '1px solid #93c5fd' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+            <p style={{ ...lbl, margin: 0 }}>This month · {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+            <span style={pillStyle('blue')}>Decision</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 7 }}>
+            Need: <strong style={{ color: '#0f172a' }}>{fmtK(monthlyNeed)}</strong> + <strong style={{ color: '#0f172a' }}>{fmtK(monthlyHC)}</strong> HC = <strong style={{ color: '#0f172a' }}>{fmtK(monthlyTotal)}</strong>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+            <div style={{ border: '1.5px solid #059669', borderRadius: 7, padding: '7px 10px', background: '#f0fdf4' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#065f46' }}>Use B1 liquid cash</div>
+              <div style={{ fontSize: 10, color: '#059669', marginTop: 1 }}>SPAXX {fmtK(spaxxBal)} · B1 {Math.round(b1pct * 100)}% funded</div>
+              <span style={{ ...pillStyle('green'), marginTop: 3, display: 'inline-block' }}>Recommended now</span>
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 10px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>Trim B3 if VTI &gt; prior peak</div>
+              <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>Only in up market — check B3 gauge before selling</div>
+              <span style={{ ...pillStyle('amber'), marginTop: 3, display: 'inline-block' }}>Market-conditional</span>
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 10px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>SCHD dividend sweep</div>
+              <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>~{fmtK(Math.round(derivedTotals.iraDividend * 0.038 / 12))} auto to B1 this month</div>
+              <span style={{ ...pillStyle('blue'), marginTop: 3, display: 'inline-block' }}>Auto</span>
+            </div>
+          </div>
+          <button onClick={function() { setActiveTab('cashflow'); }} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 14 }}>?</span> Go to Cash Flow tab for details →
+          </button>
+        </div>
+      </div>
+
+      {/* ── ROW 4: Risks + Opportunities + Next Actions ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 10 }}>
+
+        {/* Risks */}
+        <div style={card}>
+          <p style={lbl}>Risks</p>
+          {[
+            { dot: '#e24b4a', title: 'ACA premiums', sub: '$27.9k/yr until Medicare · 2 yrs' },
+            { dot: '#f59e0b', title: 'Sequence-of-returns', sub: 'B1 buffer covers ~' + Math.round(b1actual / (inp.monthlyExpenses * 12 + (inp.healthPhase1Annual || 27896)) * 10) / 10 + ' yrs' },
+            { dot: '#f59e0b', title: 'RMD at age 73', sub: '2032: forced IRA withdrawal · IRMAA exposure' },
+          ].map(function(r) {
+            return (
+              <div key={r.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.dot, display: 'inline-block', flexShrink: 0, marginTop: 3 }}></span>
+                <div><div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{r.title}</div><div style={{ fontSize: 10, color: '#64748b' }}>{r.sub}</div></div>
+              </div>
+            );
+          })}
+          <button onClick={function() { setActiveTab('monte'); }} style={{ marginTop: 7, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 6, border: '1px solid #e2e8f0', background: 'transparent', color: '#64748b', width: '100%' }}>See stress tests →</button>
+        </div>
+
+        {/* Opportunities */}
+        <div style={card}>
+          <p style={lbl}>Opportunities</p>
+          {[
+            { dot: '#059669', title: '2027 Roth conversion', sub: '$100K at 22% · ' + fmtK(irmaaHeadroom) + ' IRMAA room' },
+            { dot: '#059669', title: 'CD maturities 2026', sub: 'Toyota $50K + Wells $25K · reinvest or use' },
+            { dot: '#0ea5e9', title: 'QCDs start at 70', sub: '$15K/yr from IRA · offsets RMD + cuts taxes' },
+          ].map(function(r) {
+            return (
+              <div key={r.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderTop: '1px solid #f1f5f9' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.dot, display: 'inline-block', flexShrink: 0, marginTop: 3 }}></span>
+                <div><div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{r.title}</div><div style={{ fontSize: 10, color: '#64748b' }}>{r.sub}</div></div>
+              </div>
+            );
+          })}
+          <button onClick={function() { setActiveTab('roth'); }} style={{ marginTop: 7, fontSize: 10, padding: '4px 9px', cursor: 'pointer', borderRadius: 6, border: '1px solid #e2e8f0', background: 'transparent', color: '#64748b', width: '100%' }}>See conversion optimizer →</button>
+        </div>
+
+        {/* Next actions */}
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <p style={lbl}>Next actions</p>
+            {[
+              { color: '#059669', title: '2027 Roth conversion', sub: '$100K · 8 months · ~$24K tax cost' },
+              { color: '#0ea5e9', title: 'CD reinvestment', sub: 'Toyota $50K matures Aug · 4 months' },
+              { color: '#d1d5db', title: 'Medicare enrollment', sub: 'Nov 2027 · 19 months away' },
+            ].map(function(r) {
+              return (
+                <div key={r.title} style={{ borderLeft: '3px solid ' + r.color, paddingLeft: 9, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a' }}>{r.title}</div>
+                  <div style={{ fontSize: 10, color: '#64748b' }}>{r.sub}</div>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={function() { setActiveTab('summary'); }} style={{ marginTop: 10, background: '#059669', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span>★</span> Get full AI analysis →
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// Onboarding wizard defaults — single canonical source used by wizard steps and handleWizardComplete.
+// Keep in sync with INITIAL_DRAFT in OnboardingWizard.jsx.
+var WIZARD_DEFAULTS = {
+  ssFRA: 3445,          // median SS benefit at FRA — update when ssa.gov medians change
+  ssAge: 67,            // Full Retirement Age
+  spouseSSAt67: 1879,
+  spouseSSAge: 67,
+  monthlyExpenses: 8000,
+  retirementAge: 67,
+};
+
+export default function RetireStrongPlanner({ userId }) {
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var authLogout = authCtx ? authCtx.logout : null;
+  var markOnboardingComplete = authCtx ? authCtx.markOnboardingComplete : null;
+
+  var tabState = useState('dashboard');
   var activeTab = tabState[0]; var setActiveTab = tabState[1];
 
-  var inputState = useState(DEFAULTS);
+  var inputState = useState(function() { return flattenPlan({}); });
   var inp = inputState[0]; var setInp = inputState[1];
 
   var rawState = useState(function() {
@@ -517,6 +853,40 @@ export default function RetireStrongPlanner() {
   var dataSourceState = useState('defaults');
   var dataSource = dataSourceState[0]; var setDataSource = dataSourceState[1];
 
+  // ── Onboarding wizard gate ────────────────────────────────────────────────
+  // Source of truth: users.onboarding_complete on the server. Returned as part
+  // of the auth user object. No localStorage. Survives across browsers/incognito.
+  var wizardDone = !!(authUser && authUser.onboarding_complete);
+
+  // Hydrate inp from the saved wizard draft (onboarding_data) once per user.
+  // Holdings are loaded separately via /api/holdings.
+  useEffect(function() {
+    if (!authUser || !authUser.onboarding_data) return;
+    var d = authUser.onboarding_data;
+    var birthYear = d.birthYear || null;
+    var patch = {};
+    if (birthYear) {
+      patch.birthYear = birthYear;
+      patch.currentAge = new Date().getFullYear() - birthYear;
+    }
+    if (d.hasSpouse !== undefined) patch.hasSpouse = !!d.hasSpouse;
+    if (d.spouseBirthYear) patch.spouseBirthYear = d.spouseBirthYear;
+    if (d.ssFRA) patch.ssFRA = d.ssFRA;
+    if (d.ssAge) patch.ssAge = d.ssAge;
+    if (d.spouseSSAt67) patch.spouseSSAt67 = d.spouseSSAt67;
+    if (d.spouseSSAge) patch.spouseSSAge = d.spouseSSAge;
+    if (d.monthlyExpenses) patch.monthlyExpenses = d.monthlyExpenses;
+    if (Object.keys(patch).length === 0) return;
+    setInp(function(prev) { return Object.assign({}, prev, patch); });
+    setRaw(function(prev) {
+      var next = Object.assign({}, prev);
+      Object.keys(patch).forEach(function(k) {
+        next[k] = typeof patch[k] === 'number' ? String(patch[k]) : patch[k];
+      });
+      return next;
+    });
+  }, [authUser ? authUser.user_id : null]);
+
   // ── Load live holdings from DB on mount (falls back to DEFAULT_ASSETS) ────
   // API base comes from VITE_API_URL in .env (Personal → 3001, Pro → 3101).
   // If unset, we skip the fetch and stay on defaults rather than silently
@@ -528,7 +898,7 @@ export default function RetireStrongPlanner() {
       setDataSource('defaults');
       return;
     }
-    fetchHoldings()
+    fetchHoldings(userId)
       .then(function(data) {
         // Accept both shapes: Personal returns { holdings: [...raw DB rows] },
         // Pro returns a bare array of already-mapped records.
@@ -593,7 +963,16 @@ export default function RetireStrongPlanner() {
   var moveAssetState = useState(null); // null | asset id
   var moveAssetId = moveAssetState[0]; var setMoveAssetId = moveAssetState[1];
 
-  var scenState = useState([{name:'Base Case',data:DEFAULTS,assets:DEFAULT_ASSETS,bucketCfg:DEFAULT_BUCKET_CONFIG,date:new Date().toLocaleDateString()}]);
+  var scenState = useState(function() {
+    return [{
+      name: 'Base Case',
+      data: DEFAULTS,
+      plan: buildPlan(DEFAULTS, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, { activeScenario: 'Base Case' }),
+      assets: DEFAULT_ASSETS,
+      bucketCfg: DEFAULT_BUCKET_CONFIG,
+      date: new Date().toLocaleDateString()
+    }];
+  });
   var scenarios = scenState[0]; var setScenarios = scenState[1];
 
   var activeScenState = useState('Base Case');
@@ -601,6 +980,57 @@ export default function RetireStrongPlanner() {
 
   var modalState = useState(false);
   var showModal = modalState[0]; var setShowModal = modalState[1];
+  // ── DB sync status (Phase 2B) ─────────────────────────────────────────────
+  var saveStatusState = useState('idle');
+  var saveStatus = saveStatusState[0]; var setSaveStatus = saveStatusState[1];
+  var saveErrorState = useState(null);
+  var saveError = saveErrorState[0]; var setSaveError = saveErrorState[1];
+
+  // ── Profile autosave (Phase 2C) ───────────────────────────────────────────
+  // Debounce timer ref — no state, never causes re-renders
+  var profileSaveTimer = useRef(null);
+  // The exact 6 fields saveProfile writes — checked in setField
+  var PROFILE_AUTOSAVE_FIELDS = useRef(new Set([
+    'lifeExpectancy', 'filingStatus', 'stateTaxRate',
+    'survivorMode', 'monthlyExpenses', 'inflationRate'
+  ]));
+
+  // ── Social Security autosave (Phase 2D) ───────────────────────────────────
+  var ssSaveTimer = useRef(null);
+  // 7 durable SS config fields that saveSocialSecurity writes to DB.
+  // spouseSSAt63 is excluded — it is a scenario-only what-if input, not persisted.
+  var SS_AUTOSAVE_FIELDS = useRef(new Set([
+    'ssFRA', 'ssAge', 'ssCola',
+    'spouseSSAge', 'spouseSSMonthly', 'spouseSSAt67', 'spouseSSIsSpousal'
+  ]));
+
+  // ── Roth autosave (Phase 2E) ───────────────────────────────────────────────
+  var rothSaveTimer = useRef(null);
+  // 5 durable Roth conversion fields (conv2027–conv2031). All write to DB.
+  var ROTH_AUTOSAVE_FIELDS = useRef(new Set([
+    'conv2027', 'conv2028', 'conv2029', 'conv2030', 'conv2031'
+  ]));
+
+  // ── Healthcare autosave (Phase 2F) ────────────────────────────────────────
+  var healthcareSaveTimer = useRef(null);
+  // 4 durable healthcare fields. saveHealthcare normalizes healthInflation 0.05→5.
+  var HEALTHCARE_AUTOSAVE_FIELDS = useRef(new Set([
+    'healthPhase1Annual', 'healthPhase1EndAge', 'healthPhase2Annual', 'healthInflation'
+  ]));
+
+  // ── Expenses autosave (Phase 2F) ──────────────────────────────────────────
+  var expensesSaveTimer = useRef(null);
+  // 5 durable monthly expense fields. saveExpenses fires 5 category PUTs in parallel.
+  var EXPENSES_AUTOSAVE_FIELDS = useRef(new Set([
+    'housingMonthly', 'foodMonthly', 'transportMonthly', 'travelMonthly', 'otherMonthly'
+  ]));
+
+  // ── QCD autosave (Phase 2F) ───────────────────────────────────────────────
+  var qcdSaveTimer = useRef(null);
+  // 2 durable QCD config fields.
+  var QCD_AUTOSAVE_FIELDS = useRef(new Set([
+    'qcdAmount', 'qcdStartAge'
+  ]));
 
   var scenNameState = useState('');
   var scenName = scenNameState[0]; var setScenName = scenNameState[1];
@@ -649,32 +1079,190 @@ export default function RetireStrongPlanner() {
     setLedger(function(prev) { return prev.filter(function(e) { return e.id !== id; }); });
   }, []);
 
+  // ── Domain autosave helper (Phase 2E refactor) ────────────────────────────
+  // Encapsulates the debounce/save pattern for any domain.
+  // Does nothing if key is not in fieldsRef.current (O(1) Set check).
+  function scheduleDomainSave(key, next, fieldsRef, timerRef, saveFn, label) {
+    if (!fieldsRef.current.has(key)) return;
+    clearTimeout(timerRef.current);
+    setSaveStatus('saving');
+    timerRef.current = setTimeout(function() {
+      saveFn(next)
+        .then(function(result) {
+          if (result.ok) {
+            setSaveStatus('saved');
+            setTimeout(function() { setSaveStatus('idle'); }, 2000);
+          } else {
+            setSaveStatus('error');
+            setSaveError(label + ': ' + result.error);
+          }
+        })
+        .catch(function(e) {
+          setSaveStatus('error');
+          setSaveError(label + ': ' + (e.message || 'Unknown error'));
+        });
+    }, 1500);
+  }
+
   var setField = useCallback(function(k, v) {
     setRaw(function(p) { var n = Object.assign({}, p); n[k] = v; return n; });
     var num = v === '' ? 0 : parseFloat(v);
-    setInp(function(p) { var n = Object.assign({}, p); n[k] = isNaN(num) ? p[k] : num; return n; });
+    setInp(function(p) {
+      var next = Object.assign({}, p);
+      next[k] = isNaN(num) ? p[k] : num;
+      scheduleDomainSave(k, next, PROFILE_AUTOSAVE_FIELDS,    profileSaveTimer,    saveProfile,       'Profile');
+      scheduleDomainSave(k, next, SS_AUTOSAVE_FIELDS,         ssSaveTimer,         saveSocialSecurity,'SS');
+      scheduleDomainSave(k, next, ROTH_AUTOSAVE_FIELDS,       rothSaveTimer,       saveRothPlan,      'Roth');
+      scheduleDomainSave(k, next, HEALTHCARE_AUTOSAVE_FIELDS, healthcareSaveTimer, saveHealthcare,    'Healthcare');
+      scheduleDomainSave(k, next, EXPENSES_AUTOSAVE_FIELDS,   expensesSaveTimer,   saveExpenses,      'Expenses');
+      scheduleDomainSave(k, next, QCD_AUTOSAVE_FIELDS,        qcdSaveTimer,        saveQCD,           'QCD');
+      return next;
+    });
   }, []);
 
   var loadScen = useCallback(function(s) {
-    setInp(s.data);
+    // Cancel any pending autosave timers for the outgoing scenario
+    clearTimeout(profileSaveTimer.current);
+    clearTimeout(ssSaveTimer.current);
+    clearTimeout(rothSaveTimer.current);
+    clearTimeout(healthcareSaveTimer.current);
+    clearTimeout(expensesSaveTimer.current);
+    clearTimeout(qcdSaveTimer.current);
+    setSaveStatus('idle');
+    // Canonical path: scenario has a .plan object → go through flattenPlan
+    // Legacy path: scenario only has flat .data → use it directly (backward compat)
+    var resolved = s.plan ? flattenPlan(s.plan) : s.data;
+    setInp(resolved);
     var r = {};
-    Object.keys(s.data).forEach(function(k) { r[k] = typeof s.data[k] === 'number' ? String(s.data[k]) : s.data[k]; });
+    Object.keys(resolved).forEach(function(k) { r[k] = typeof resolved[k] === 'number' ? String(resolved[k]) : resolved[k]; });
     setRaw(r);
-    if (s.assets) setAssets(s.assets);
-    if (s.bucketCfg) setBucketCfg(s.bucketCfg);
+    // assets: prefer plan.assets if non-empty, fall back to s.assets
+    var resolvedAssets = (s.plan && s.plan.assets && s.plan.assets.length > 0) ? s.plan.assets : s.assets;
+    // bucketCfg: prefer plan.bucketConfig if non-empty, fall back to s.bucketCfg
+    var resolvedBuckets = (s.plan && s.plan.bucketConfig && s.plan.bucketConfig.length > 0) ? s.plan.bucketConfig : s.bucketCfg;
+    if (resolvedAssets && resolvedAssets.length > 0) setAssets(resolvedAssets);
+    if (resolvedBuckets && resolvedBuckets.length > 0) setBucketCfg(resolvedBuckets);
     setActiveScen(s.name);
   }, []);
+
+  // Preset scenario creation
+  var createPresetScenario = useCallback(function(preset) {
+    var baseScen = scenarios.find(function(s) { return s.name === 'Base Case'; });
+    var sourcePlan = baseScen ? Object.assign({}, baseScen.data) : Object.assign({}, inp);
+    var sourceAssets = baseScen ? baseScen.assets.slice() : assets.slice();
+    var sourceBucketCfg = baseScen ? baseScen.bucketCfg.slice() : bucketCfg.slice();
+    var newPlan = preset.apply(sourcePlan);
+    if (preset.scenarioInsight) { newPlan.scenarioInsight = preset.scenarioInsight; }
+    var baseName = preset.defaultName;
+    var existingNames = scenarios.map(function(s) { return s.name; });
+    var finalName = baseName;
+    var counter = 2;
+    while (existingNames.indexOf(finalName) !== -1) {
+      finalName = baseName + ' (' + counter + ')';
+      counter++;
+    }
+    var newScenario = {
+      name: finalName,
+      data: newPlan,
+      plan: buildPlan(newPlan, sourceAssets, sourceBucketCfg, { activeScenario: finalName }),
+      assets: sourceAssets,
+      bucketCfg: sourceBucketCfg,
+      date: new Date().toLocaleDateString(),
+      presetId: preset.id,
+    };
+    setScenarios(function(prev) { return prev.concat([newScenario]); });
+    loadScen(newScenario);
+  }, [scenarios, inp, assets, bucketCfg, loadScen]);
 
   var saveScen = useCallback(function() {
     var name = scenName.trim() || ('Scenario ' + (scenarios.length + 1));
     setScenarios(function(prev) {
       var filtered = prev.filter(function(s) { return s.name !== name; });
-      return filtered.concat([{name:name,data:Object.assign({},inp),assets:assets.slice(),bucketCfg:bucketCfg.slice(),date:new Date().toLocaleDateString()}]);
+      return filtered.concat([{
+        name: name,
+        data: Object.assign({}, inp),
+        plan: buildPlan(inp, assets, bucketCfg, { activeScenario: name }),
+        assets: assets.slice(),
+        bucketCfg: bucketCfg.slice(),
+        date: new Date().toLocaleDateString()
+      }]);
     });
     setActiveScen(name);
     setScenName('');
     setShowModal(false);
   }, [scenName, scenarios, inp, assets, bucketCfg]);
+
+  // ── Toast state ────────────────────────────────────────────────────────────
+  var toastState = useState(null);
+  var toastMsg = toastState[0]; var setToastMsg = toastState[1];
+
+  // ── Silent save to current scenario (no prompt) ────────────────────────────
+  // IMPORTANT: This saves to the in-memory `scenarios` React state only.
+  // It does NOT persist to the DB or localStorage — a page refresh will lose it.
+  // To persist to the DB, use syncToDB (Sync button) or rely on domain autosave.
+  var saveSilently = useCallback(function() {
+    var name = activeScen || 'Base Case';
+    setScenarios(function(prev) {
+      var filtered = prev.filter(function(s) { return s.name !== name; });
+      return filtered.concat([{
+        name: name,
+        data: Object.assign({}, inp),
+        plan: buildPlan(inp, assets, bucketCfg, { activeScenario: name }),
+        assets: assets.slice(),
+        bucketCfg: bucketCfg.slice(),
+        date: new Date().toLocaleDateString()
+      }]);
+    });
+    setToastMsg('Saved ✓');
+    setTimeout(function() { setToastMsg(null); }, 2000);
+  }, [activeScen, inp, assets, bucketCfg]);
+
+  // ── Phase 2B: Explicit DB sync ────────────────────────────────────────────
+  var syncToDB = useCallback(async function() {
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      var results = await saveAllDurable(inp);
+      var failed = results.filter(function(r) { return !r.ok; });
+      if (failed.length > 0) {
+        setSaveStatus('error');
+        setSaveError(failed.map(function(r) { return r.domain + ': ' + r.error; }).join(' | '));
+      } else {
+        setSaveStatus('saved');
+        setTimeout(function() { setSaveStatus('idle'); }, 2000);
+      }
+    } catch (e) {
+      setSaveStatus('error');
+      setSaveError(e.message || 'Unknown error');
+    }
+  }, [inp]);
+
+  // ── Phase 2A: Round-trip verification (dev/test helper) ─────────────────────
+  // Verifies that current state → buildPlan → flattenPlan produces identical inp.
+  // Call window.verifyRoundTrip() in the browser console to run.
+  useEffect(function() {
+    window.verifyRoundTrip = function() {
+      var builtPlan = buildPlan(inp, assets, bucketCfg);
+      var reloaded = flattenPlan(builtPlan);
+      var mismatches = [];
+      Object.keys(inp).forEach(function(k) {
+        if (inp[k] !== reloaded[k]) {
+          mismatches.push({ key: k, original: inp[k], reloaded: reloaded[k] });
+        }
+      });
+      // Check assets round-trip
+      var assetsMatch = JSON.stringify(assets) === JSON.stringify(builtPlan.assets);
+      var bucketsMatch = JSON.stringify(bucketCfg) === JSON.stringify(builtPlan.bucketConfig);
+      var result = {
+        inpMismatches: mismatches,
+        assetsMatch: assetsMatch,
+        bucketsMatch: bucketsMatch,
+        passed: mismatches.length === 0 && assetsMatch && bucketsMatch
+      };
+      console.log('Round-trip result:', result);
+      return result;
+    };
+  }, [inp, assets, bucketCfg]);
 
   // ── Asset CRUD handlers ──────────────────────────────────────────────────────
   var openAddAsset = useCallback(function() {
@@ -778,117 +1366,8 @@ export default function RetireStrongPlanner() {
     return combinedMarginalRate(inpWithAssets.monthlyExpenses * 12 + inpWithAssets.pensionMonthly * 12, status, inpWithAssets.stateTaxRate);
   }, [inpWithAssets]);
 
-  var cashFlow = useMemo(function() {
-    var data = [];
-    var taxable = inpWithAssets.taxableBal + (inpWithAssets.severanceNet || 0); // v13: severance adds to opening taxable
-    var iraCash = inpWithAssets.iraBalCash;
-    var iraTips = inpWithAssets.iraBalTips;
-    var iraDividend = inpWithAssets.iraBalDividend;
-    var iraGrowth = inpWithAssets.iraBalGrowth;
-    var roth = inpWithAssets.rothBal;
-    var years = inpWithAssets.lifeExpectancy - inpWithAssets.currentAge;
-    var inf = er.inflation;
-    var cR   = inpWithAssets.cashReturnRate   / 100;
-    var tR   = inf + inpWithAssets.tipsRealReturn / 100;
-    var dvR  = inpWithAssets.dividendReturnRate / 100;
-    var grR  = inpWithAssets.growthReturnRate   / 100;
-    var roR  = inpWithAssets.rothReturnRate     / 100;
-    var status = resolveStatus(inpWithAssets);
-    var stRate = inpWithAssets.stateTaxRate || 2.5;
-    for (var y = 0; y <= years; y++) {
-      var age = inpWithAssets.currentAge + y;
-      var calYear = 2026 + y;
-      var infMult = Math.pow(1 + inf, y);
-      var extra = (calYear === 2027 ? inpWithAssets.extraSpend2027 : 0) + (calYear === 2028 ? inpWithAssets.extraSpend2028 : 0);
-      var hcInflMult = Math.pow(1 + inpWithAssets.healthInflation, y);
-      var healthcare = (age < inpWithAssets.healthPhase1EndAge) ? inpWithAssets.healthPhase1Annual * hcInflMult : inpWithAssets.healthPhase2Annual * hcInflMult;
-      // v13: 2026 partial year — retirement starts April 10, expenses = 8.7 months
-      var livingBase = inpWithAssets.monthlyExpenses * 12 * infMult;
-      if (calYear === 2026) livingBase = inpWithAssets.monthlyExpenses * 8.7 * infMult;
-      var expenses = livingBase + extra + healthcare;
-      // v13: SS broken out separately
-      var scottSS = scottSSForYear(inpWithAssets, calYear);
-      var staceySS = staceySSForYear(inpWithAssets, calYear);
-      var ssIncome = scottSS + staceySS;
-      var income = ssIncome;
-      if (age >= inpWithAssets.pensionStartAge && inpWithAssets.pensionMonthly > 0) income += inpWithAssets.pensionMonthly * 12;
-      if (y < inpWithAssets.partTimeYears && inpWithAssets.partTimeIncome > 0) income += inpWithAssets.partTimeIncome;
-      var gap = Math.max(0, expenses - income);
-      var iraSum = iraCash + iraTips + iraDividend + iraGrowth;
-      var rmd = (age >= 73 && iraSum > 0) ? iraSum / getRMD(age) : 0;
-      var need = Math.max(gap, rmd);
-      var mRate = combinedMarginalRate(income + need, status, stRate);
-      // v13: Track withdrawals by source
-      var withdrawn = 0; var taxes = 0;
-      var fromTaxable = 0, fromIRA = 0, fromRoth = 0;
-      var preTaxable = taxable, preIraCash = iraCash, preIraTips = iraTips, preIraDividend = iraDividend, preIraGrowth = iraGrowth, preRoth = roth;
-      var wd = function(avail, rate) {
-        if (withdrawn >= need || avail <= 0) return avail;
-        var amt = Math.min(avail, need - withdrawn);
-        withdrawn += amt; taxes += amt * rate;
-        return avail - amt;
-      };
-      taxable     = wd(taxable,     0.15 + stRate/100);
-      fromTaxable = preTaxable - taxable;
-      iraCash     = wd(iraCash,     mRate);
-      iraTips     = wd(iraTips,     mRate);
-      iraDividend = wd(iraDividend, mRate);
-      iraGrowth   = wd(iraGrowth,   mRate);
-      fromIRA     = (preIraCash - iraCash) + (preIraTips - iraTips) + (preIraDividend - iraDividend) + (preIraGrowth - iraGrowth);
-      roth        = wd(roth,        0);
-      fromRoth    = preRoth - roth;
-      // Roth conversions — source from GROWTH first
-      var rothConv = rothConvForYear(inpWithAssets, calYear);
-      var convFromGrowth = Math.min(iraGrowth, rothConv);
-      var convRemain = rothConv - convFromGrowth;
-      var convFromDiv = Math.min(iraDividend, convRemain);
-      convRemain -= convFromDiv;
-      var convFromCash = Math.min(iraCash, convRemain);
-      iraGrowth -= convFromGrowth; iraDividend -= convFromDiv; iraCash -= convFromCash;
-      roth += convFromGrowth + convFromDiv + convFromCash;
-      // Conversion tax — actual bracket math (federal + state)
-      var convGross = income + rothConv;
-      var convTax = rothConv > 0 ? (effectiveTax(convGross, status) - effectiveTax(income, status)) + rothConv * (stRate / 100) : 0;
-      taxable = Math.max(0, taxable - convTax);
-      // v13: IRMAA check
-      var ssTaxable = ssIncome * 0.85;
-      var magi = ssTaxable + fromIRA + rothConv + (inpWithAssets.pensionMonthly * 12);
-      var irmaaHit = magi > 212000;
-      // QCD from IRA (not Roth)
-      var qcd = (age >= inpWithAssets.qcdStartAge) ? Math.min(inpWithAssets.qcdAmount, iraSum * 0.05) : 0;
-      var qcdFromCash = Math.min(iraCash, qcd);
-      var qcdFromDiv = Math.min(iraDividend, qcd - qcdFromCash);
-      iraCash -= qcdFromCash;
-      iraDividend -= qcdFromDiv;
-      // Estimated total tax
-      var estTax = Math.round(taxes + convTax + effectiveTax(income, status));
-      var total = Math.max(0, taxable + iraCash + iraTips + iraDividend + iraGrowth + roth);
-      data.push({
-        year: calYear, age, balance: total,
-        iraBalance: Math.round(iraCash + iraTips + iraDividend + iraGrowth),
-        rothBalance: Math.round(roth),
-        taxableBalance: Math.round(taxable),
-        scottSS: Math.round(scottSS), staceySS: Math.round(staceySS),
-        income: Math.round(income), ssIncome: Math.round(ssIncome),
-        expenses: Math.round(expenses), healthcare: Math.round(healthcare),
-        living: Math.round(livingBase + extra),
-        gap: Math.round(gap),
-        fromTaxable: Math.round(fromTaxable), fromIRA: Math.round(fromIRA), fromRoth: Math.round(fromRoth),
-        rothConv: Math.round(rothConv), convTax: Math.round(convTax),
-        estTax: estTax, irmaaHit: irmaaHit, magi: Math.round(magi),
-        rmd: Math.round(rmd), shortfall: Math.max(0, need - withdrawn),
-        margRate: Math.round(mRate * 100),
-        taxes: Math.round(taxes)
-      });
-      taxable     = Math.max(0, taxable     * (1 + cR * 0.5 + dvR * 0.5));
-      iraCash     = Math.max(0, iraCash     * (1 + cR));
-      iraTips     = Math.max(0, iraTips     * (1 + tR));
-      iraDividend = Math.max(0, iraDividend * (1 + dvR));
-      iraGrowth   = Math.max(0, iraGrowth   * (1 + grR));
-      roth        = Math.max(0, roth * (1 + roR));
-    }
-    return data;
-  }, [inpWithAssets, er]);
+  var cashFlow = useMemo(function() { return buildCashFlow(inpWithAssets, er); }, [inpWithAssets, er]);
+
 
   // ── Bucket-aware Monte Carlo with realistic refill discipline ────────────────
   // Bucket 1 (cash): covers expenses. Refilled by: dividends always, TIPS at maturity,
@@ -898,156 +1377,7 @@ export default function RetireStrongPlanner() {
   // Bucket 3 (growth + Roth): untouched in down years. Trimmed to refill B1 in up years.
   // Bear market (growth < -10%): live on B1 cash only. No B2/B3 equity sales.
   // Up year (growth > 0%): trim B3 up to 5% to refill B1 if below 1yr expenses.
-  var mcData = useMemo(function() {
-    var years = inpWithAssets.lifeExpectancy - inpWithAssets.currentAge;
-    var results = [];
-    var cR  = inpWithAssets.cashReturnRate / 100;
-    var tR  = er.inflation + inpWithAssets.tipsRealReturn / 100;
-    var dvR = inpWithAssets.dividendReturnRate / 100;
-    var grR = inpWithAssets.growthReturnRate / 100;
-    var roR = inpWithAssets.rothReturnRate / 100;
-    var stockVol = inpWithAssets.stockVol / 100;
-    var divVol   = stockVol * 0.55;
-    var tipsVol  = 0.03;
-    var annualExp = inpWithAssets.monthlyExpenses * 12;
-    var retireY = inpWithAssets.retirementAge - inpWithAssets.currentAge;
-    // TIPS maturity schedule (year index relative to currentAge)
-    var tipsMat = {};
-    tipsMat[retireY + 2] = derivedTotals.iraTips * (107000/315000);
-    tipsMat[retireY + 5] = derivedTotals.iraTips * (103000/315000);
-    tipsMat[retireY + 8] = derivedTotals.iraTips * (105000/315000);
-
-    for (var sim = 0; sim < 500; sim++) {
-      var taxable  = derivedTotals.taxable;
-      var b1cash   = derivedTotals.iraCash;
-      var b2tips   = derivedTotals.iraTips;
-      var b2div    = derivedTotals.iraDividend;
-      var b3growth = derivedTotals.iraGrowth;
-      var roth     = derivedTotals.roth;
-
-      var bals   = [Math.max(0, taxable+b1cash+b2tips+b2div+b3growth+roth)];
-      var b1bals = [b1cash];
-      var b2bals = [b2tips+b2div];
-      var b3bals = [b3growth+roth];
-
-      for (var y = 1; y <= years; y++) {
-        var age2 = inpWithAssets.currentAge + y;
-
-        // Box-Muller random returns
-        var u1 = Math.random(), u2 = Math.random();
-        var z  = Math.sqrt(-2*Math.log(Math.max(u1,1e-9)))*Math.cos(2*Math.PI*u2);
-        var zd = Math.sqrt(-2*Math.log(Math.max(Math.random(),1e-9)))*Math.cos(2*Math.PI*Math.random());
-        var zt = Math.sqrt(-2*Math.log(Math.max(Math.random(),1e-9)))*Math.cos(2*Math.PI*Math.random());
-
-        var retCash   = cR;
-        var retTips   = tR  + tipsVol * zt;
-        var retDiv    = dvR + divVol  * zd;
-        var retGrowth = grR + stockVol * z;
-        var retRoth   = roR + stockVol * z * 1.05;
-        var marketUp  = retGrowth > 0;
-        var bearYear  = retGrowth < -0.10;
-
-        // Income
-        var calYear2 = 2026 + y;
-        var inc2 = ssIncomeForYear(inpWithAssets, calYear2);
-        if (age2 >= inpWithAssets.pensionStartAge) inc2 += inpWithAssets.pensionMonthly * 12;
-
-        // Expenses
-        var hcMC = (age2 < inpWithAssets.healthPhase1EndAge)
-          ? inpWithAssets.healthPhase1Annual * Math.pow(1+inpWithAssets.healthInflation,y)
-          : inpWithAssets.healthPhase2Annual * Math.pow(1+inpWithAssets.healthInflation,y);
-        var exp2     = inpWithAssets.monthlyExpenses * 12 * Math.pow(1+er.inflation,y) + hcMC;
-        var oneYrExp = annualExp * Math.pow(1+er.inflation,y);
-
-        // RMDs
-        var iraSum2 = b1cash + b2tips + b2div + b3growth;
-        var rmd2 = (age2 >= 73 && iraSum2 > 0) ? iraSum2 / getRMD(age2) : 0;
-        var need = Math.max(Math.max(0, exp2 - inc2), rmd2);
-
-        // STEP 1: Sweep SCHD/VNQ dividends from B2 into B1 (always, every year)
-        var divSweep = b2div * dvR;
-        b2div  = Math.max(0, b2div - divSweep);
-        b1cash = b1cash + divSweep;
-
-        // STEP 2: TIPS maturity — move maturing principal to B1
-        if (tipsMat[y]) {
-          var matAmt = Math.min(b2tips, tipsMat[y] * Math.pow(1+tR, y));
-          b2tips = Math.max(0, b2tips - matAmt);
-          b1cash = b1cash + matAmt;
-        }
-
-        // STEP 3: Cover gap from B1 first (always safe)
-        var withdrawn = 0;
-        var wdFrom = function(avail, skip) {
-          if (withdrawn >= need || avail <= 0 || skip) return avail;
-          var amt = Math.min(avail, need - withdrawn);
-          withdrawn += amt;
-          return avail - amt;
-        };
-        taxable = wdFrom(taxable, false);
-        b1cash  = wdFrom(b1cash,  false);
-
-        // STEP 4: If still short, tap B2 TIPS principal then B2 div principal
-        b2tips = wdFrom(b2tips, false);
-        b2div  = wdFrom(b2div,  false);
-
-        // STEP 5: Tap B3 only if market up or last resort in bear year
-        b3growth = wdFrom(b3growth, bearYear);
-        roth     = wdFrom(roth,     bearYear);
-        if (withdrawn < need) {
-          b3growth = wdFrom(b3growth, false);
-          roth     = wdFrom(roth,     false);
-        }
-
-        // STEP 6: Refill B1 from B3 in up years if B1 below 1yr expenses
-        if (marketUp && b1cash < oneYrExp && (b3growth + roth) > 0) {
-          var refill = Math.min(oneYrExp - b1cash, (b3growth + roth) * 0.05);
-          var fromG  = Math.min(b3growth, refill * 0.6);
-          var fromR  = Math.min(roth,     refill * 0.4);
-          b3growth -= fromG; roth -= fromR;
-          b1cash   += fromG + fromR;
-        }
-
-        // STEP 7: Roth conversions — v12: source from GROWTH first, bracket-based tax
-        var rothConv2 = rothConvForYear(inpWithAssets, calYear2);
-        var mcConvFromGrowth = Math.min(b3growth, rothConv2);
-        var mcConvRemain = rothConv2 - mcConvFromGrowth;
-        var mcConvFromDiv = Math.min(b2div, mcConvRemain);
-        mcConvRemain -= mcConvFromDiv;
-        var mcConvFromCash = Math.min(b1cash, mcConvRemain);
-        b3growth -= mcConvFromGrowth; b2div -= mcConvFromDiv; b1cash -= mcConvFromCash;
-        roth += mcConvFromGrowth + mcConvFromDiv + mcConvFromCash;
-        // v12: bracket-based conversion tax (federal + state)
-        var mcStatus = resolveStatus(inpWithAssets);
-        var mcConvTax = rothConv2 > 0 ? (effectiveTax(inc2 + rothConv2, mcStatus) - effectiveTax(inc2, mcStatus)) + rothConv2 * (inpWithAssets.stateTaxRate / 100) : 0;
-        taxable = Math.max(0, taxable - mcConvTax);
-
-        // STEP 8: QCD — v12: from IRA (b1cash then b2div), not Roth
-        var qcd2 = (age2 >= inpWithAssets.qcdStartAge) ? Math.min(inpWithAssets.qcdAmount, iraSum2 * 0.05) : 0;
-        var qcd2FromCash = Math.min(b1cash, qcd2);
-        var qcd2FromDiv = Math.min(b2div, qcd2 - qcd2FromCash);
-        b1cash -= qcd2FromCash;
-        b2div -= qcd2FromDiv;
-
-        // STEP 9: Grow remaining balances
-        taxable  = Math.max(0, taxable  * (1 + cR * 0.5 + retDiv * 0.5));
-        b1cash   = Math.max(0, b1cash   * (1 + retCash));
-        b2tips   = Math.max(0, b2tips   * (1 + retTips));
-        b2div    = Math.max(0, b2div    * (1 + retDiv));
-        b3growth = Math.max(0, b3growth * (1 + retGrowth));
-        roth     = Math.max(0, roth * (1 + retRoth));
-
-        var totalBal = Math.max(0, taxable + b1cash + b2tips + b2div + b3growth + roth);
-        bals.push(totalBal);
-        b1bals.push(Math.max(0, b1cash));
-        b2bals.push(Math.max(0, b2tips + b2div));
-        b3bals.push(Math.max(0, b3growth + roth));
-        if (totalBal <= 0) break;
-      }
-      results.push({ total: bals, b1: b1bals, b2: b2bals, b3: b3bals });
-    }
-    return results;
-  }, [inpWithAssets, er, derivedTotals]);
+  var mcData = useMemo(function() { return runMonteCarlo(inpWithAssets, er, derivedTotals); }, [inpWithAssets, er, derivedTotals]);
 
 
   var pctData = useMemo(function() {
@@ -1069,6 +1399,50 @@ export default function RetireStrongPlanner() {
     var survived = mcData.filter(function(r){return (r.total[r.total.length-1]||0)>0;}).length;
     return (survived/mcData.length*100).toFixed(1);
   }, [mcData]);
+
+  var mcPercentiles = useMemo(function() {
+    // Re-run a lightweight version to get percentile bands for the dashboard chart
+    var years = inpWithAssets.lifeExpectancy - inpWithAssets.currentAge;
+    var er = capeBased(inpWithAssets.capeRatio, inpWithAssets.tenYrTreasury, inpWithAssets.tipsYield);
+    var stockVol = inpWithAssets.stockVol / 100;
+    var grR = inpWithAssets.growthReturnRate / 100;
+    var roR = inpWithAssets.rothReturnRate / 100;
+    var allPaths = [];
+    for (var sim = 0; sim < 200; sim++) {
+      var bal = derivedTotals.taxable + derivedTotals.iraCash + derivedTotals.iraTips + derivedTotals.iraDividend + derivedTotals.iraGrowth + derivedTotals.roth;
+      var path = [bal];
+      for (var y = 1; y <= years; y++) {
+        var u1 = Math.random(), u2 = Math.random();
+        var z = Math.sqrt(-2 * Math.log(Math.max(u1, 1e-9))) * Math.cos(2 * Math.PI * u2);
+        var ret = grR + stockVol * z;
+        var inc = ssIncomeForYear(inpWithAssets, 2026 + y);
+        var exp2 = inpWithAssets.monthlyExpenses * 12 * Math.pow(1 + er.inflation, y);
+        var hc = (inpWithAssets.currentAge + y < inpWithAssets.healthPhase1EndAge)
+          ? inpWithAssets.healthPhase1Annual * Math.pow(1 + inpWithAssets.healthInflation, y)
+          : inpWithAssets.healthPhase2Annual * Math.pow(1 + inpWithAssets.healthInflation, y);
+        var gap = Math.max(0, exp2 + hc - inc);
+        bal = Math.max(0, bal * (1 + ret * 0.6) - gap);
+        path.push(Math.round(bal));
+      }
+      allPaths.push(path);
+    }
+    var labels = [];
+    for (var a = 0; a <= years; a++) labels.push(inpWithAssets.currentAge + a);
+    var pct = function(arr, p) {
+      var s = arr.slice().sort(function(a, b) { return a - b; });
+      return s[Math.floor(s.length * p / 100)] || 0;
+    };
+    var p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
+    for (var i = 0; i <= years; i++) {
+      var col = allPaths.map(function(path) { return path[i] || 0; });
+      p10.push(Math.round(pct(col, 10) / 1000));
+      p25.push(Math.round(pct(col, 25) / 1000));
+      p50.push(Math.round(pct(col, 50) / 1000));
+      p75.push(Math.round(pct(col, 75) / 1000));
+      p90.push(Math.round(pct(col, 90) / 1000));
+    }
+    return { labels, p10, p25, p50, p75, p90 };
+  }, [inpWithAssets, derivedTotals]);
 
   var taxRows = useMemo(function() {
     var rows = [];
@@ -1305,7 +1679,7 @@ export default function RetireStrongPlanner() {
       '[2-3 specific action items ranked by priority with timeframes]'
     ].filter(Boolean).join('\n');
 
-    fetchAiInsights(prompt)
+    apiFetchAiInsights(prompt)
     .then(function(data) {
       var text = (data.content || []).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
       if (!text) throw new Error(data.error ? data.error.message : 'Empty response');
@@ -1333,6 +1707,41 @@ export default function RetireStrongPlanner() {
 
   var successColor = parseFloat(successRate) >= 90 ? '#10b981' : parseFloat(successRate) >= 75 ? '#f59e0b' : '#ef4444';
 
+  var bucketPctData = pctData.map(function(d) { return { year: d.year, b1: d.b1med, b2: d.b2med, b3: d.b3med }; });
+
+  var SS_COLORS_CTX = ['#f87171','#fbbf24','#fb923c','#34d399','#60a5fa','#a78bfa','#e879f9','#22d3ee','#10b981'];
+
+  // Shared context object passed to extracted tab components
+  var tabCtx = {
+    // Data
+    cashFlow, pctData, bucketPctData, successRate, successColor,
+    rothWindow, derivedTotals, totalPort, assets, bucketCfg,
+    inp, inpWithAssets, er, mcPercentiles,
+    dataSource, insights, aiInsights, aiLoading, aiError,
+    // Tax/income derived
+    dynTaxRate, iraTotal,
+    // Income tracker state
+    thisYear, updateThisYear,
+    // Spending tracker state
+    monthlySpend, updateMonthSpend,
+    // Bucket state
+    buckets, unassigned, moveAssetToBucket, setMoveAssetId, moveAssetId,
+    // SS state + data
+    ssCompareAge, setSsCompareAge, be6770, projA, proj70,
+    ssCompData, SS_COLORS: SS_COLORS_CTX, cumSsChart, portCompChart, projRothBridge,
+    // Scenario management
+    scenarios, activeScen, loadScen, createPresetScenario,
+    // Setters
+    setField, setActiveTab, fetchAiInsights,
+    // Formatters
+    fmtC, fmtFull, fmtPct,
+    // Theme tokens
+    PF, SS_FONT, BG, SURFACE, SURFACE2, BORDER, BORDER2,
+    TXT1, TXT2, TXT3, ACCENT, ACCENT2, SHADOW, CARD,
+    // Helper components
+    TTip,
+  };
+
   function TTip(props) {
     if (!props.active || !props.payload || !props.payload.length) return null;
     return React.createElement('div', {style:{background:SURFACE,border:'1px solid '+BORDER,borderRadius:8,padding:'10px 14px'}},
@@ -1342,6 +1751,7 @@ export default function RetireStrongPlanner() {
   }
 
   var TABS = [
+    {id:'dashboard',name:'Dashboard',Icon:BarChart3},
     {id:'summary',name:'AI Summary',Icon:Activity},
     {id:'incometax',name:'Income & Tax',Icon:DollarSign},
     {id:'spending',name:'Spending',Icon:Target},
@@ -1469,8 +1879,70 @@ export default function RetireStrongPlanner() {
     );
   }
 
+  var overviewProps = {inp,inpWithAssets,successRate,cashFlow,mcPercentiles,derivedTotals,totalPort,buckets,rothWindow,dynTaxRate,er,activeScen,setActiveTab,fmtC,fmtFull};
+
+  function handleWizardComplete(draft) {
+    var birthYear = draft.birthYear || 1959;
+    var currentAge = new Date().getFullYear() - birthYear;
+    var merged = Object.assign({}, flattenPlan({}), {
+      birthYear: birthYear,
+      currentAge: currentAge,
+      hasSpouse: draft.hasSpouse || false,
+      spouseBirthYear: draft.spouseBirthYear || (draft.hasSpouse ? 1962 : DEFAULTS.spouseBirthYear),
+      ssFRA: draft.ssFRA || WIZARD_DEFAULTS.ssFRA,
+      ssAge: draft.ssAge || WIZARD_DEFAULTS.ssAge,
+      spouseSSAt67: draft.spouseSSAt67 || DEFAULTS.spouseSSAt67,
+      spouseSSAge: draft.spouseSSAge || DEFAULTS.spouseSSAge,
+      monthlyExpenses: draft.monthlyExpenses || WIZARD_DEFAULTS.monthlyExpenses,
+      onboardingComplete: true,
+    });
+    var newRaw = {};
+    Object.keys(merged).forEach(function(k) { newRaw[k] = typeof merged[k] === 'number' ? String(merged[k]) : merged[k]; });
+    // Starter placeholder assets — one per account type. Skip any with $0 amount.
+    var placeholderAssets = [
+      { id: 'w1', name: 'IRA/401k (starter)', amount: draft.ira || 0, account: 'IRA', bucket: 2, type: 'Bond', maturity: 'Ongoing', yld: '', risk: 'Medium' },
+      { id: 'w2', name: 'Roth (starter)', amount: draft.roth || 0, account: 'Roth IRA', bucket: 3, type: 'Equity ETF', maturity: 'Ongoing', yld: '', risk: 'Medium' },
+      { id: 'w3', name: 'Taxable (starter)', amount: draft.taxable || 0, account: 'Taxable', bucket: 1, type: 'Cash', maturity: 'Liquid', yld: '', risk: 'Low' },
+    ].filter(function(a) { return (a.amount || 0) > 0; });
+
+    setInp(merged);
+    setRaw(newRaw);
+    setAssets(placeholderAssets);
+    setActiveTab('dashboard');
+
+    // Persist placeholder holdings to DB so they survive reload.
+    var apiBase = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '';
+    var holdingsPersist = apiBase
+      ? Promise.all(placeholderAssets.map(function(a) {
+          return fetch(apiBase + '/api/holdings?user_id=' + encodeURIComponent(userId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userId,
+              account: a.account, name: a.name, symbol: a.name,
+              amount: a.amount, type: a.type, bucket: a.bucket, risk: a.risk,
+            }),
+          }).catch(function(e) { console.warn('holdings POST failed:', e); });
+        }))
+      : Promise.resolve();
+
+    // Mark complete on the server. Only after both finish do we let the gate
+    // close (the auth user state update flips wizardDone to true).
+    holdingsPersist.then(function() {
+      if (markOnboardingComplete) {
+        markOnboardingComplete(draft).catch(function(e) {
+          console.error('Failed to mark onboarding complete:', e);
+        });
+      }
+    });
+  }
+
+  if (!wizardDone) {
+    return <OnboardingWizard onComplete={handleWizardComplete} />;
+  }
+
   return (
-    <div style={{fontFamily:SS_FONT,background:BG,minHeight:'100vh',padding:24,color:TXT1,fontWeight:600}}>
+    <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
         .rt:hover{background:#f0fdf4!important;color:#059669!important}
@@ -1487,38 +1959,44 @@ export default function RetireStrongPlanner() {
         ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
         ::-webkit-scrollbar-thumb:hover{background:#94a3b8}
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        .rs-nav-item:hover{background:rgba(255,255,255,0.08)!important;color:rgba(255,255,255,0.85)!important}
       `}</style>
-
-      <AssetEditorModal />
-      <MoveBucketModal />
-
-      {/* Header */}
-      <div style={{background:'linear-gradient(135deg,#059669 0%,#047857 100%)',borderRadius:16,padding:'20px 28px',marginBottom:16,border:'1px solid rgba(5,150,105,.2)',boxShadow:'0 4px 24px rgba(5,150,105,.25)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:14}}>
-          <div style={{display:'flex',alignItems:'center',gap:16}}>
-            <div style={{width:48,height:48,background:'rgba(16,185,129,.2)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(16,185,129,.4)'}}>
-              <TrendingUp size={26} color="#10b981" />
-            </div>
-            <div>
-              <h1 style={{fontFamily:PF,fontSize:24,fontWeight:700,color:'#ecfdf5',margin:0}}>RetireStrong</h1>
-              <p style={{fontFamily:SS_FONT,fontSize:10,color:'#6ee7b7',margin:0,letterSpacing:2,textTransform:'uppercase'}}>RetireStrong Pro v1 · {activeScen}</p>
-            </div>
-          </div>
-          <div style={{display:'flex',gap:22,alignItems:'center',flexWrap:'wrap'}}>
-            {[['Success',successRate+'%',successColor],['Portfolio',fmtC(totalPort),'#e2e8f0'],['Holdings',assets.length+'','#60a5fa'],['Tax Rate',(dynTaxRate*100).toFixed(0)+'%','#fbbf24']].map(function(item){
-              return (
-                <div key={item[0]} style={{textAlign:'center'}}>
-                  <div style={{fontFamily:PF,fontSize:22,fontWeight:700,color:item[2],lineHeight:1}}>{item[1]}</div>
-                  <div style={{fontFamily:SS_FONT,fontSize:9,color:'#94a3b8',letterSpacing:1.5,textTransform:'uppercase',marginTop:3}}>{item[0]}</div>
-                </div>
-              );
-            })}
-            <button onClick={function(){setShowModal(true);}} style={{display:'flex',alignItems:'center',gap:6,background:'rgba(16,185,129,.2)',border:'1px solid rgba(16,185,129,.4)',borderRadius:8,padding:'8px 14px',color:'#34d399',cursor:'pointer',fontSize:12,fontWeight:600}}>
-              <Save size={13}/> Save
-            </button>
-          </div>
-        </div>
-      </div>
+      <AppShell
+        sidebar={
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            activeScen={activeScen}
+            successRate={successRate}
+            saveStatus={saveStatus}
+            syncToDB={syncToDB}
+            saveSilently={saveSilently}
+            setShowModal={setShowModal}
+            dataSource={dataSource}
+            user={authUser}
+            logout={authLogout}
+          />
+        }
+        rail={
+          <AIInsightsRail
+            inp={inp}
+            inpWithAssets={inpWithAssets}
+            successRate={successRate}
+            cashFlow={cashFlow}
+            derivedTotals={derivedTotals}
+            totalPort={totalPort}
+            buckets={buckets}
+            rothWindow={rothWindow}
+            dynTaxRate={dynTaxRate}
+            activeScen={activeScen}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            fmtC={fmtC}
+          />
+        }
+      >
+        <AssetEditorModal />
+        <MoveBucketModal />
 
       {/* Save Scenario Modal */}
       {showModal && (
@@ -1536,23 +2014,9 @@ export default function RetireStrongPlanner() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{background:SURFACE,borderRadius:12,marginBottom:16,border:'1px solid '+BORDER,overflow:'hidden'}}>
-        <div style={{display:'flex',overflowX:'auto'}}>
-          {TABS.map(function(tab){
-            var active = activeTab === tab.id;
-            return (
-              <button key={tab.id} className="rt" onClick={function(){setActiveTab(tab.id);}}
-                style={{display:'flex',alignItems:'center',gap:6,padding:'11px 15px',whiteSpace:'nowrap',border:'none',cursor:'pointer',fontSize:11,fontWeight:600,letterSpacing:0.4,background:active?'#f0fdf4':'transparent',color:active?'#059669':'#64748b',borderBottom:active?'2px solid #059669':'2px solid transparent',transition:'all .2s'}}>
-                <tab.Icon size={12}/>{tab.name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div style={{background:SURFACE,borderRadius:16,padding:28,border:'1px solid '+BORDER,boxShadow:SHADOW}}>
+      {activeTab === 'dashboard'
+        ? <OverviewPage {...overviewProps} />
+        : <div style={{background:SURFACE,borderRadius:16,padding:28,border:'1px solid '+BORDER,boxShadow:SHADOW,margin:'0 0 0 0'}}>
 
         {/* ── SUMMARY TAB ─────────────────────────────────────────────────────── */}
 
@@ -1885,127 +2349,8 @@ export default function RetireStrongPlanner() {
           </div>
         )}
 
-        {/* ── SPENDING TAB — v13 ─────────────────────────────────────────────────── */}
-        {activeTab === 'spending' && (
-          <div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div>
-                <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:4,fontWeight:600}}>Spending Tracker</h2>
-                <p style={{fontSize:12,color:TXT2,margin:0}}>Monthly actuals vs budget · YTD trend · Bucket 1 runway</p>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <label style={{fontSize:11,color:TXT2,fontWeight:600}}>Year:</label>
-                <select value={inp.spendYear||2026} onChange={function(e){setField('spendYear',e.target.value);}}
-                  style={{background:SURFACE2,border:'1px solid '+BORDER,borderRadius:7,padding:'7px 12px',color:TXT1,fontSize:13,fontWeight:700,cursor:'pointer'}}>
-                  {Array.from({length:15},function(_,i){return 2026+i;}).map(function(yr){return <option key={yr} value={yr}>{yr}</option>;})}
-                </select>
-              </div>
-            </div>
+        {activeTab === 'spending' && <SpendingTab ctx={tabCtx} />}
 
-            {/* Monthly entry grid */}
-            <div style={{...CARD,marginBottom:16}}>
-              <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:14,fontWeight:600}}>Monthly Totals — {inp.spendYear||2026}</h3>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
-                {['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].map(function(m,mi){
-                  var labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                  var val = monthlySpend[m] || 0;
-                  var budget = inpWithAssets.monthlyExpenses;
-                  var over = val > budget && val > 0;
-                  return (
-                    <div key={m} style={{background:val>0?(over?'rgba(248,113,113,.05)':'rgba(52,211,153,.05)'):'transparent',border:'1px solid '+(val>0?(over?'rgba(248,113,113,.2)':'rgba(52,211,153,.2)'):BORDER),borderRadius:8,padding:8}}>
-                      <label style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:0.5,display:'block',marginBottom:4}}>{labels[mi]}</label>
-                      <input type="number" step={100} value={val||''} placeholder="0"
-                        onChange={function(e){updateMonthSpend(m, e.target.value);}}
-                        style={{width:'100%',background:SURFACE2,border:'1px solid '+BORDER,borderRadius:5,padding:'5px 7px',color:over?'#f87171':'#10b981',fontSize:13,fontFamily:PF,fontWeight:700,boxSizing:'border-box'}}/>
-                      {val > 0 && <div style={{fontSize:8,color:over?'#f87171':'#34d399',marginTop:2,fontWeight:600}}>{over?'+':''}{fmtC(val - budget)}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* YTD vs Budget Chart */}
-            {(function(){
-              var months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-              var labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              var entered = months.filter(function(m){return monthlySpend[m] > 0;});
-              var ytdTotal = entered.reduce(function(s,m){return s + monthlySpend[m];}, 0);
-              var ytdBudget = entered.length * inpWithAssets.monthlyExpenses;
-              var avgMonthly = entered.length > 0 ? ytdTotal / entered.length : 0;
-              var chartData = months.map(function(m,i){
-                return {month:labels[i], actual:monthlySpend[m]||0, budget:inpWithAssets.monthlyExpenses};
-              }).filter(function(d){return d.actual > 0;});
-
-              return (
-                <div>
-                  {/* YTD Summary cards */}
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
-                    <div style={{background:'rgba(16,185,129,.08)',border:'1px solid rgba(16,185,129,.25)',borderRadius:10,padding:14,textAlign:'center'}}>
-                      <div style={{fontFamily:PF,fontSize:22,color:'#10b981',fontWeight:700}}>{fmtC(ytdTotal)}</div>
-                      <div style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:1,marginTop:4}}>YTD Actual ({entered.length} mo)</div>
-                    </div>
-                    <div style={{background:(ytdTotal<=ytdBudget?'rgba(52,211,153,.08)':'rgba(248,113,113,.08)'),border:'1px solid '+(ytdTotal<=ytdBudget?'rgba(52,211,153,.25)':'rgba(248,113,113,.25)'),borderRadius:10,padding:14,textAlign:'center'}}>
-                      <div style={{fontFamily:PF,fontSize:22,color:ytdTotal<=ytdBudget?'#34d399':'#f87171',fontWeight:700}}>{ytdTotal<=ytdBudget?'-':'+' }{fmtC(Math.abs(ytdTotal - ytdBudget))}</div>
-                      <div style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:1,marginTop:4}}>vs Budget</div>
-                    </div>
-                    <div style={{background:'rgba(96,165,250,.08)',border:'1px solid rgba(96,165,250,.25)',borderRadius:10,padding:14,textAlign:'center'}}>
-                      <div style={{fontFamily:PF,fontSize:22,color:'#60a5fa',fontWeight:700}}>{avgMonthly>0?fmtC(avgMonthly):'—'}</div>
-                      <div style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:1,marginTop:4}}>Avg Monthly</div>
-                    </div>
-                    <div style={{background:'rgba(167,139,250,.08)',border:'1px solid rgba(167,139,250,.25)',borderRadius:10,padding:14,textAlign:'center'}}>
-                      <div style={{fontFamily:PF,fontSize:22,color:'#a78bfa',fontWeight:700}}>{fmtC(inpWithAssets.monthlyExpenses)}</div>
-                      <div style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:1,marginTop:4}}>Budget/Month</div>
-                    </div>
-                  </div>
-
-                  {/* Spend vs Budget bar chart */}
-                  {chartData.length > 0 && (
-                    <div style={{...CARD,marginBottom:16}}>
-                      <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:12,fontWeight:600}}>Actual vs Budget</h3>
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={chartData} margin={{top:5,right:20,left:20,bottom:5}}>
-                          <CartesianGrid strokeDasharray="3 3" stroke={BORDER}/>
-                          <XAxis dataKey="month" stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                          <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                          <Tooltip content={<TTip/>}/>
-                          <Legend wrapperStyle={{fontSize:11}}/>
-                          <Bar dataKey="actual" fill="#10b981" name="Actual" radius={[3,3,0,0]}/>
-                          <Bar dataKey="budget" fill="rgba(148,163,184,0.3)" name="Budget" radius={[3,3,0,0]}/>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-
-                  {/* B1 Runway */}
-                  <div style={{...CARD}}>
-                    <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:8,fontWeight:600}}>Bucket 1 Cash Runway</h3>
-                    {(function(){
-                      var b1Cash = derivedTotals.taxable + derivedTotals.iraCash + (inpWithAssets.severanceNet || 0);
-                      var burn = avgMonthly > 0 ? avgMonthly : inpWithAssets.monthlyExpenses;
-                      var runwayMo = Math.round(b1Cash / burn);
-                      var pct = Math.min(100, (runwayMo / 36) * 100);
-                      var color = runwayMo >= 24 ? '#10b981' : runwayMo >= 12 ? '#f59e0b' : '#ef4444';
-                      return (
-                        <div>
-                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-                            <span style={{fontSize:12,color:TXT2}}>Cash: <strong style={{color:'#10b981'}}>{fmtFull(b1Cash)}</strong> ÷ {fmtC(burn)}/mo</span>
-                            <span style={{fontSize:14,color:color,fontWeight:700}}>{runwayMo} months</span>
-                          </div>
-                          <div style={{height:16,background:SURFACE2,borderRadius:8,overflow:'hidden'}}>
-                            <div style={{height:16,width:pct+'%',background:color,borderRadius:8}}/>
-                          </div>
-                          <div style={{display:'flex',justifyContent:'space-between',marginTop:3,fontSize:9,color:TXT3}}>
-                            <span>0</span><span>12 mo</span><span>24 mo</span><span>36 mo target</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
         {activeTab === 'assets' && (
           <AssetsTab
             assets={assets}
@@ -2035,6 +2380,24 @@ export default function RetireStrongPlanner() {
           />
         )}
         {activeTab === 'buckets' && (
+          <PortfolioPage
+            assets={assets}
+            buckets={buckets}
+            bucketCfg={bucketCfg}
+            totalPort={totalPort}
+            composition={composition}
+            unassigned={unassigned}
+            openAddAsset={openAddAsset}
+            openEditAsset={openEditAsset}
+            deleteAsset={deleteAsset}
+            setMoveAssetId={setMoveAssetId}
+            moveAssetToBucket={moveAssetToBucket}
+            fmtC={fmtC}
+            fmtFull={fmtFull}
+            inp={inp}
+          />
+        )}
+        {false && activeTab === 'buckets_legacy' && (
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:14}}>
               <div>
@@ -2164,306 +2527,11 @@ export default function RetireStrongPlanner() {
             })}
           </div>
         )}
-        {activeTab === 'cashflow' && (
-          <div>
-            <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:8,fontWeight:600}}>Cash Flow Projection</h2>
-            <p style={{fontSize:12,color:TXT2,marginBottom:12}}>v1 · Every year · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
-
-            {/* Stacey SS Toggle */}
-            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.2)',borderRadius:10,padding:'10px 16px'}}>
-              <span style={{fontSize:12,color:TXT2,fontWeight:600}}>Stacey SS:</span>
-              <button onClick={function(){setField('staceySS63',inp.staceySS63?0:1);}}
-                style={{background:inp.staceySS63?'#a78bfa':'rgba(167,139,250,.15)',border:'1px solid #a78bfa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:inp.staceySS63?'white':'#a78bfa',fontSize:11,fontWeight:700}}>
-                Age 63 — $1,472/mo
-              </button>
-              <button onClick={function(){setField('staceySS63',inp.staceySS63?0:1);}}
-                style={{background:!inp.staceySS63?'#60a5fa':'rgba(96,165,250,.15)',border:'1px solid #60a5fa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:!inp.staceySS63?'white':'#60a5fa',fontSize:11,fontWeight:700}}>
-                Age 67 — $1,879/mo
-              </button>
-              <span style={{fontSize:11,color:TXT3,marginLeft:8}}>
-                {inp.staceySS63 ? 'Starts Aug 2025 · Lower benefit · Immediate income' : 'Starts Aug 2029 · Higher benefit · Larger gap years 2026–2029'}
-              </span>
-            </div>
-
-            {/* Chart */}
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={cashFlow} margin={{top:10,right:20,left:20,bottom:0}}>
-                <defs>
-                  {[['gb','#10b981'],['gi','#60a5fa'],['gr','#a78bfa'],['ge','#f87171']].map(function(g){return <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={g[1]} stopOpacity={0.3}/><stop offset="95%" stopColor={g[1]} stopOpacity={0.02}/></linearGradient>;})}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={BORDER}/>
-                <XAxis dataKey="year" stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                <Tooltip content={<TTip/>}/>
-                <Legend wrapperStyle={{fontSize:11,color:TXT2}}/>
-                <Area type="monotone" dataKey="balance" stroke="#10b981" fill="url(#gb)" strokeWidth={2} name="Total Balance"/>
-                <Area type="monotone" dataKey="iraBalance" stroke="#60a5fa" fill="url(#gi)" strokeWidth={1.5} name="IRA"/>
-                <Area type="monotone" dataKey="rothBalance" stroke="#a78bfa" fill="url(#gr)" strokeWidth={1.5} name="Roth"/>
-                <Area type="monotone" dataKey="expenses" stroke="#f87171" fill="url(#ge)" strokeWidth={2} name="Expenses"/>
-              </AreaChart>
-            </ResponsiveContainer>
-
-            {/* Recommendation Panel — Current + Next Year */}
-            {cashFlow.length >= 2 && (
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,margin:'16px 0'}}>
-                {cashFlow.slice(0,2).map(function(row){
-                  var yr = row.year;
-                  var status = row.gap <= 0 ? 'success' : row.irmaaHit ? 'danger' : row.rmd > 0 ? 'warning' : 'info';
-                  var colors = {success:['#10b981','rgba(16,185,129,.08)','rgba(16,185,129,.25)'],warning:['#f59e0b','rgba(245,158,11,.08)','rgba(245,158,11,.25)'],danger:['#ef4444','rgba(239,68,68,.08)','rgba(239,68,68,.25)'],info:['#3b82f6','rgba(59,130,246,.08)','rgba(59,130,246,.25)']};
-                  var c = colors[status];
-                  var advice = '';
-                  if (yr === 2026) advice = 'Partial retirement year. No Roth conversions — W-2 + severance fills bracket. Fund gap from Bucket 1 cash.';
-                  else if (yr === 2027) advice = 'Prime conversion year. Convert '+fmtC(rothConvForYear(inpWithAssets,2027))+' at 22%. Keep MAGI under $212K for IRMAA.';
-                  else if (row.rmd > 0) advice = 'RMDs required: '+fmtC(row.rmd)+'. QCDs offset '+fmtC(Math.min(inpWithAssets.qcdAmount, row.rmd))+' tax-free.';
-                  else if (row.gap > 0 && row.scottSS === 0) advice = 'Pre-SS gap year. Draw '+fmtC(row.gap)+' from Bucket 1. Preserve IRA for conversions.';
-                  else advice = 'SS covers '+Math.round(row.income/Math.max(1,row.expenses)*100)+'% of expenses. Gap: '+fmtC(row.gap);
-                  return (
-                    <div key={yr} style={{background:c[1],border:'1px solid '+c[2],borderRadius:10,padding:'12px 16px'}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
-                        <span style={{fontFamily:PF,fontSize:16,color:c[0],fontWeight:700}}>{yr}</span>
-                        <span style={{fontSize:10,color:TXT3}}>Age {row.age}</span>
-                      </div>
-                      <div style={{fontSize:12,color:TXT2,lineHeight:1.6}}>{advice}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* v13 Redesigned Table — every year, two conceptual sections per row */}
-            <div style={{overflowX:'auto',marginTop:8}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:10,minWidth:1200}}>
-                <thead>
-                  <tr style={{background:SURFACE2}}>
-                    <th colSpan={2} style={{padding:'6px 8px',textAlign:'left',color:TXT1,fontWeight:800,fontSize:8,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}></th>
-                    <th colSpan={4} style={{padding:'6px 8px',textAlign:'center',color:'#10b981',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}>Balances (Jan 1)</th>
-                    <th colSpan={2} style={{padding:'6px 8px',textAlign:'center',color:'#34d399',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}>Income</th>
-                    <th colSpan={2} style={{padding:'6px 8px',textAlign:'center',color:'#f87171',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}>Spending</th>
-                    <th style={{padding:'6px 8px',textAlign:'center',color:'#fbbf24',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}>Gap</th>
-                    <th colSpan={3} style={{padding:'6px 8px',textAlign:'center',color:'#60a5fa',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER,borderRight:'1px solid '+BORDER}}>Draws From</th>
-                    <th colSpan={3} style={{padding:'6px 8px',textAlign:'center',color:'#a78bfa',fontWeight:800,fontSize:8,textTransform:'uppercase',letterSpacing:1,borderBottom:'2px solid '+BORDER}}>Optimization</th>
-                  </tr>
-                  <tr style={{background:SURFACE2}}>
-                    {['Year','Age','Total','IRA','Roth','Taxable','Scott SS','Stacey SS','Expenses','HC','Gap','Taxable','IRA','Roth','Conv','Est Tax','IRMAA'].map(function(h,hi){
-                      return <th key={h} style={{padding:'5px 6px',textAlign:hi<2?'left':'right',color:TXT2,fontWeight:700,fontSize:8,textTransform:'uppercase',letterSpacing:0.3,borderBottom:'1px solid '+BORDER,whiteSpace:'nowrap'}}>{h}</th>;
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cashFlow.map(function(row,i){
-                    var isCurrentYear = row.year === 2026;
-                    var hasRMD = row.rmd > 0;
-                    var rowBg = isCurrentYear ? 'rgba(16,185,129,.04)' : i%2===0 ? SURFACE : SURFACE2;
-                    return (
-                      <tr key={i} style={{borderBottom:'1px solid '+BORDER,background:rowBg}}>
-                        <td style={{padding:'5px 6px',color:isCurrentYear?ACCENT:TXT1,fontWeight:700,fontSize:11}}>{row.year}</td>
-                        <td style={{padding:'5px 6px',color:TXT3,fontSize:10}}>{row.age}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#10b981',fontWeight:700}}>{fmtC(row.balance)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#60a5fa'}}>{fmtC(row.iraBalance)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#a78bfa'}}>{fmtC(row.rothBalance)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#2dd4bf'}}>{fmtC(row.taxableBalance)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:row.scottSS>0?'#34d399':TXT3}}>{row.scottSS>0?fmtC(row.scottSS):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:row.staceySS>0?'#34d399':TXT3}}>{row.staceySS>0?fmtC(row.staceySS):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#f87171'}}>{fmtC(row.expenses)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#fb923c',fontSize:9}}>{fmtC(row.healthcare)}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:row.gap>0?'#fbbf24':TXT3,fontWeight:row.gap>0?700:400}}>{row.gap>0?fmtC(row.gap):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#2dd4bf'}}>{row.fromTaxable>0?fmtC(row.fromTaxable):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#60a5fa'}}>{row.fromIRA>0?fmtC(row.fromIRA):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#a78bfa'}}>{row.fromRoth>0?fmtC(row.fromRoth):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#c084fc',fontWeight:600}}>{row.rothConv>0?fmtC(row.rothConv):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'right',color:'#fbbf24'}}>{row.estTax>0?fmtC(row.estTax):'—'}</td>
-                        <td style={{padding:'5px 6px',textAlign:'center'}}>{row.irmaaHit?<span style={{background:'rgba(248,113,113,.15)',color:'#f87171',borderRadius:3,padding:'1px 5px',fontSize:8,fontWeight:700}}>HIT</span>:<span style={{color:'#34d399',fontSize:8}}>OK</span>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-        {activeTab === 'monte' && (
-          <div>
-            <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:4,fontWeight:600}}>Monte Carlo Simulation</h2>
-            <p style={{fontSize:12,color:TXT2,marginBottom:20}}>500 simulations · full bucket strategy with dividend refill, TIPS-first sequencing, and market-condition-aware equity sales</p>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:22}}>
-              {[['Success Rate',successRate+'%',successColor],['Median Final',fmtC(pctData.length>0?pctData[pctData.length-1].p50:0),'#2563eb'],['90th Pct',fmtC(pctData.length>0?pctData[pctData.length-1].p90:0),'#7c3aed'],['10th Pct',fmtC(pctData.length>0?pctData[pctData.length-1].p10:0),'#dc2626']].map(function(item){
-                return <div key={item[0]} className="rc" style={{background:item[2]+'12',border:'1px solid '+item[2]+'30',borderRadius:10,padding:'14px 16px'}}><div style={{fontFamily:PF,fontSize:22,color:item[2],fontWeight:700}}>{item[1]}</div><div style={{fontSize:9,color:TXT3,textTransform:'uppercase',letterSpacing:1,marginTop:4}}>{item[0]}</div></div>
-              })}
-            </div>
-
-            <div style={{...CARD,marginBottom:20}}>
-              <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:4,fontWeight:600}}>Total Portfolio — Percentile Bands</h3>
-              <p style={{fontSize:11,color:TXT3,marginBottom:14}}>Shaded bands show 10th–90th percentile range. Each simulation: SCHD/VNQ dividends refill Bucket 1 annually. Bear years (-10%+): cash + TIPS only, no equity sales. Good years (+10%+): trim equities, rebalance gains to Bucket 1. Neutral years: cash → TIPS → dividends → equities only if exhausted.</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={pctData} margin={{top:10,right:20,left:20,bottom:0}}>
-                  <defs>
-                    {[['gp90','#7c3aed'],['gp75','#2563eb'],['gp50','#059669'],['gp25','#d97706'],['gp10','#dc2626']].map(
-                      function(g){return <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={g[1]} stopOpacity={0.25}/><stop offset="95%" stopColor={g[1]} stopOpacity={0.02}/></linearGradient>;}
-                    )}
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BORDER}/>
-                  <XAxis dataKey="year" stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                  <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                  <Tooltip content={<TTip/>}/>
-                  <Legend wrapperStyle={{fontSize:11,color:TXT2}}/>
-                  {[['p90','#7c3aed','gp90','90th %ile'],['p75','#2563eb','gp75','75th %ile'],['p50','#059669','gp50','Median'],['p25','#d97706','gp25','25th %ile'],['p10','#dc2626','gp10','10th %ile']].map(function(s){
-                    return <Area key={s[0]} type="monotone" dataKey={s[0]} stroke={s[1]} fill={'url(#'+s[2]+')'} strokeWidth={s[0]==='p50'?2.5:1.5} name={s[3]} fillOpacity={1}/>;
-                  })}
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div style={{...CARD,marginBottom:20}}>
-              <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:4,fontWeight:600}}>Median Bucket Trajectories</h3>
-              <p style={{fontSize:11,color:TXT3,marginBottom:14}}>Median balance of each bucket — shows SORR protection in action. Bucket 1 depletes first, Bucket 3 grows longest.</p>
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={pctData} margin={{top:10,right:20,left:20,bottom:0}}>
-                  <defs>
-                    <linearGradient id="gb1" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#059669" stopOpacity={0.3}/><stop offset="95%" stopColor="#059669" stopOpacity={0.02}/></linearGradient>
-                    <linearGradient id="gb2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0.02}/></linearGradient>
-                    <linearGradient id="gb3" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3}/><stop offset="95%" stopColor="#7c3aed" stopOpacity={0.02}/></linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={BORDER}/>
-                  <XAxis dataKey="year" stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                  <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{fontSize:10,fill:TXT3}}/>
-                  <Tooltip content={<TTip/>}/>
-                  <Legend wrapperStyle={{fontSize:11,color:TXT2}}/>
-                  <Area type="monotone" dataKey="b1med" stroke="#059669" fill="url(#gb1)" strokeWidth={2.5} name="Bucket 1 — Cash Buffer" fillOpacity={1}/>
-                  <Area type="monotone" dataKey="b2med" stroke="#2563eb" fill="url(#gb2)" strokeWidth={2.5} name="Bucket 2 — Income Bridge" fillOpacity={1}/>
-                  <Area type="monotone" dataKey="b3med" stroke="#7c3aed" fill="url(#gb3)" strokeWidth={2.5} name="Bucket 3 — Growth" fillOpacity={1}/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div style={{background:'rgba(37,99,235,.06)',border:'1px solid rgba(37,99,235,.2)',borderRadius:10,padding:'12px 16px',fontSize:12,color:TXT2,lineHeight:1.7}}>
-              <strong style={{color:'#2563eb'}}>How this simulation works:</strong> Each bucket is tracked independently using its own return rate and volatility. Cash earns a steady rate with zero volatility. TIPS get a real yield plus small volatility. Dividend ETFs use ~55% of stock volatility. Growth and Roth use full stock volatility (correlated). In bad years (growth &lt;−10%), the simulation skips Bucket 2/3 withdrawals and uses cash first — this is the core SORR protection. All numbers flow directly from your current asset holdings.
-            </div>
-
-            {/* Inflation sensitivity grid */}
-            <div style={{...CARD,marginTop:16}}>
-              <h3 style={{fontFamily:PF,fontSize:14,color:TXT1,marginBottom:4,fontWeight:600}}>Inflation Sensitivity Analysis</h3>
-              <p style={{fontSize:11,color:TXT2,marginBottom:14}}>How different inflation scenarios affect your projected portfolio at age {inpWithAssets.lifeExpectancy}</p>
-              <div style={{overflowX:'auto'}}>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-                  <thead>
-                    <tr style={{background:SURFACE2}}>
-                      <th style={{padding:'7px 11px',textAlign:'left',color:TXT2,fontWeight:700,fontSize:9,textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid '+BORDER}}>Inflation Scenario</th>
-                      {['2%','3% (Base)','4%','5%','6% (Stress)'].map(function(h){return <th key={h} style={{padding:'7px 11px',textAlign:'right',color:h.includes('Base')?'#34d399':h.includes('Stress')?'#f87171':TXT2,fontWeight:700,fontSize:9,textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid '+BORDER}}>{h}</th>;})}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(function(){
-                      var inflationRates = [0.02, 0.03, 0.04, 0.05, 0.06];
-                      var rows2 = [
-                        {label:'Annual Expenses at 80',fn:function(inf){return inpWithAssets.monthlyExpenses*12*Math.pow(1+inf,14);}},
-                        {label:'Annual Expenses at 90',fn:function(inf){return inpWithAssets.monthlyExpenses*12*Math.pow(1+inf,24);}},
-                        {label:'Lifetime HC Cost',fn:function(inf){var t=0;for(var y=0;y<=inpWithAssets.lifeExpectancy-inpWithAssets.currentAge;y++){var age2=inpWithAssets.currentAge+y;var hc=(age2<inpWithAssets.healthPhase1EndAge)?inpWithAssets.healthPhase1Annual*Math.pow(1+inpWithAssets.healthInflation,y):inpWithAssets.healthPhase2Annual*Math.pow(1+inpWithAssets.healthInflation,y);t+=hc;}return t;}},
-                        {label:'Projected Balance at 90 (est)',fn:function(inf){var mult=1+(0.03-inf)*18;return Math.max(0,(cashFlow[cashFlow.length-1]||{balance:0}).balance*mult);}},
-                      ];
-                      return rows2.map(function(row,i){
-                        var vals = inflationRates.map(row.fn);
-                        var baseVal = vals[1];
-                        return (
-                          <tr key={i} style={{borderBottom:'1px solid '+BORDER,background:i%2===0?SURFACE:SURFACE2}}>
-                            <td style={{padding:'8px 11px',color:TXT1,fontWeight:600}}>{row.label}</td>
-                            {vals.map(function(v,j){
-                              var diff = v - baseVal;
-                              var isBase = j===1;
-                              var c = isBase?TXT1:diff>0?'#f87171':'#34d399';
-                              return <td key={j} style={{padding:'8px 11px',textAlign:'right',color:c,fontWeight:isBase?700:400}}>{fmtC(v)}{!isBase&&<span style={{fontSize:9,marginLeft:4,color:c}}>{diff>0?'+':''}{fmtC(diff)}</span>}</td>;
-                            })}
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{marginTop:12,fontSize:11,color:TXT3,lineHeight:1.6}}>
-                <strong style={{color:'#fbbf24'}}>Key insight:</strong> Every 1% increase in inflation above 3% erodes ~{fmtC(inpWithAssets.monthlyExpenses*12*14*0.01)} in cumulative real spending power by age 80. TIPS in Bucket 2 provide explicit inflation protection — this is why the TIPS ladder was built to cover years 4–10.
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'cashflow' && <CashFlowTab ctx={tabCtx} />}
+        {activeTab === 'monte' && <MonteCarloTab ctx={tabCtx} />}
 
         {/* ── ROTH CONVERSIONS TAB — v13 ────────────────────────────────────────── */}
-        {activeTab === 'roth' && (
-          <div>
-            <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:20,fontWeight:600}}>Roth Conversion Strategy</h2>
-            <div style={{background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.25)',borderRadius:13,padding:22,marginBottom:22}}>
-              <h3 style={{fontFamily:PF,fontSize:16,color:'#a78bfa',marginBottom:4,fontWeight:600}}>Roth Conversion Window</h3>
-              <p style={{fontSize:12,color:TXT2,marginBottom:16}}>
-                <strong style={{color:'#f87171'}}>2026: Working year — no conversions.</strong> W-2 income pushes bracket too high.{' '}
-                Window opens <strong style={{color:'#34d399'}}>Jan 2027</strong> and runs until RMDs begin at age {rothWindow.rmdAge} — <strong style={{color:'#a78bfa'}}>{rothWindow.years} years</strong>.
-              </p>
-              <div style={{background:'rgba(220,38,38,.06)',border:'1px solid rgba(220,38,38,.2)',borderRadius:8,padding:'10px 14px',marginBottom:16,display:'flex',alignItems:'center',gap:12}}>
-                <span style={{fontSize:18}}>🚫</span>
-                <div>
-                  <div style={{fontSize:12,color:'#f87171',fontWeight:700,marginBottom:2}}>2026 — No Roth Conversion (Working Year)</div>
-                  <div style={{fontSize:11,color:TXT3}}>W-2 income + partial SS pushes bracket high. Use 2026 to plan, rebalance within IRAs, and max remaining 401k contributions instead.</div>
-                </div>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
-                {[['Conv Window','2027–'+rothWindow.rmdYear,'#a78bfa'],['Years Available',rothWindow.years+' yrs','#34d399'],['IRMAA Safe MAGI',fmtC(rothWindow.irmaaSafe),'#fbbf24'],['Total Convertible',fmtC(rothWindow.totalRecommended),'#60a5fa']].map(function(item){
-                  return <div key={item[0]} style={{background:item[2]+'15',border:'1px solid '+item[2]+'30',borderRadius:10,padding:14,textAlign:'center'}}><div style={{fontFamily:PF,fontSize:20,color:item[2],fontWeight:800}}>{item[1]}</div><div style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:1,marginTop:3}}>{item[0]}</div></div>;
-                })}
-              </div>
-              <div style={{background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.25)',borderRadius:10,padding:14,marginBottom:18}}>
-                <div style={{fontSize:11,color:'#fbbf24',fontWeight:700,marginBottom:6}}>⚠️ IRMAA: The Hidden Conversion Tax</div>
-                <div style={{fontSize:11,color:TXT3,lineHeight:1.7}}>
-                  Medicare uses income from <strong style={{color:TXT1}}>2 years ago</strong>. Convert too much in 2027 and you pay IRMAA surcharges in 2029.
-                  Keep <strong style={{color:'#fbbf24'}}>MAGI under ${(rothWindow.irmaaSafe).toLocaleString()}</strong> (MFJ 2025) to avoid first surcharge tier of ~$594/yr per person.
-                </div>
-              </div>
-              <div style={{background:'rgba(96,165,250,.06)',border:'1px solid rgba(96,165,250,.2)',borderRadius:10,padding:14,marginBottom:16}}>
-                <div style={{fontSize:12,color:'#60a5fa',fontWeight:700,marginBottom:8}}>📊 How Your Bracket Is Calculated Each Year</div>
-                <div style={{fontSize:11,color:TXT2,lineHeight:1.8}}>
-                  <strong style={{color:TXT1}}>Base Income</strong> = IRA withdrawals (gap funding) + 85% of SS + pension — <em>all taxable before conversion</em><br/>
-                  <strong style={{color:TXT1}}>Room 12%</strong> = space remaining in 12% bracket after base income &amp; standard deduction<br/>
-                  <strong style={{color:TXT1}}>Recommended</strong> = convert up to 12% ceiling, capped by IRMAA-safe limit<br/>
-                  <strong style={{color:'#f97316'}}>Key insight:</strong> Converting into the 22% bracket now is better than paying 24%+ on forced RMDs at 73. Taxes on conversions are paid from your taxable brokerage account (~$13K/yr), preserving IRA and Roth balances intact.
-                </div>
-              </div>
-              <div style={{overflowX:'auto',marginBottom:16}}>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-                  <thead><tr style={{background:SURFACE2}}>
-                    {['Year','Age','SS Income','IRA Draw','Base Inc','IRMAA-Safe Max','Your Plan','Room Left','Rate','MAGI','IRMAA Status'].map(function(h){
-                      return <th key={h} style={{padding:'7px 10px',textAlign:h==='Year'||h==='IRMAA Status'?'left':'right',color:TXT2,fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:0.4,borderBottom:'1px solid '+BORDER,whiteSpace:'nowrap'}}>{h}</th>;
-                    })}
-                  </tr></thead>
-                  <tbody>
-                    {rothWindow.yearByYear.map(function(row,i){
-                      var safe = row.irmaaStatus.includes('Safe');
-                      var roomLeft = Math.max(0, row.irmaaSafeConv - (row.scheduledConv||0));
-                      return (
-                        <tr key={i} className="rr" style={{borderBottom:'1px solid '+BORDER}}>
-                          <td style={{padding:'8px 10px',color:TXT1,fontWeight:700}}>{row.year}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:TXT3}}>{row.age}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:'#34d399'}}>{row.ssIncome>0?fmtC(row.ssIncome):'—'}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:'#f97316'}}>{fmtC(row.iraWithdrawal)}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:TXT1}}>{fmtC(row.baseIncome)}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:'#fbbf24',fontWeight:600}}>{fmtC(row.irmaaSafeConv)}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:'#a78bfa',fontWeight:700}}>{row.scheduledConv>0?fmtC(row.scheduledConv):'—'}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:roomLeft>0?'#60a5fa':TXT3,fontSize:11}}>{roomLeft>0?fmtC(roomLeft):'—'}</td>
-                          <td style={{padding:'8px 10px',textAlign:'right'}}><span style={{background:row.taxRate==='12%'?'rgba(96,165,250,.15)':'rgba(167,139,250,.15)',color:row.taxRate==='12%'?'#60a5fa':'#a78bfa',border:'1px solid '+(row.taxRate==='12%'?'rgba(96,165,250,.3)':'rgba(167,139,250,.3)'),borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>{row.taxRate}</span></td>
-                          <td style={{padding:'8px 10px',textAlign:'right',color:TXT1}}>{fmtC(row.magi)}</td>
-                          <td style={{padding:'8px 10px'}}><span style={{background:safe?'rgba(52,211,153,.15)':'rgba(248,113,113,.15)',color:safe?'#34d399':'#f87171',border:'1px solid '+(safe?'rgba(52,211,153,.3)':'rgba(248,113,113,.3)'),borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>{row.irmaaStatus}</span></td>
-                        </tr>
-                      );
-                    })}
-                    <tr style={{borderTop:'2px solid #334155',background:'rgba(167,139,250,.05)'}}>
-                      <td colSpan={6} style={{padding:'8px 10px',color:TXT2,fontSize:11,fontWeight:700}}>YOUR SCHEDULED CONVERSIONS (5-year total)</td>
-                      <td style={{padding:'8px 10px',textAlign:'right',color:'#a78bfa',fontWeight:700,fontSize:13}}>{fmtC(rothWindow.totalScheduled)}</td>
-                      <td style={{padding:'8px 10px',textAlign:'right',color:'#60a5fa',fontSize:11}}>{fmtC(rothWindow.totalRecommended - rothWindow.totalScheduled)} unused room</td>
-                      <td colSpan={3} style={{padding:'8px 10px',color:TXT2,fontSize:10}}>Max IRMAA-safe: {fmtC(rothWindow.totalRecommended)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-        )}
+        {activeTab === 'roth' && <RothConversionsTab ctx={tabCtx} />}
 
         {/* ── SS STRATEGY TAB — v13 ─────────────────────────────────────────────── */}
         {activeTab === 'ss' && (
@@ -2815,9 +2883,13 @@ export default function RetireStrongPlanner() {
             setActiveTab={setActiveTab}
             scenarios={scenarios}
             setScenarios={setScenarios}
+            createPresetScenario={createPresetScenario}
             activeScen={activeScen}
             setShowModal={setShowModal}
             loadScen={loadScen}
+            syncToDB={syncToDB}
+            saveStatus={saveStatus}
+            saveError={saveError}
             derivedTotals={derivedTotals}
             totalPort={totalPort}
             fmtC={fmtC}
@@ -2836,12 +2908,19 @@ export default function RetireStrongPlanner() {
 
 
 
-      </div>
+      </div>}
+      </AppShell>
 
-      <div style={{marginTop:16,textAlign:'center'}}>
-        <p style={{fontSize:11,color:TXT3,margin:0}}>RetireStrong Pro v1 · {fmtC(totalPort)} · Active: {activeScen}{inp.survivorMode?' · ⚠️ SURVIVOR MODE':''}{inp.staceySS63?' · Stacey SS@63':''} · {dataSource === 'database' ? '🟢 Live from DB' : dataSource === 'offline' ? '🟡 Offline (defaults)' : '⚪ Defaults'}</p>
-        <p style={{fontSize:10,color:'#1e3a5f',marginTop:3}}>Planning tool only. Consult a financial advisor for personalized guidance.</p>
-      </div>
-    </div>
+      {/* Toast notification */}
+      {toastMsg && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#0A4D54', color: '#FFFFFF',
+          borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 9999,
+          pointerEvents: 'none',
+        }}>{toastMsg}</div>
+      )}
+    </>
   );
 }
