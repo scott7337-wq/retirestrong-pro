@@ -7,6 +7,7 @@ import StatusPill from './StatusPill.jsx';
 import MilestonesRibbon from './MilestonesRibbon.jsx';
 import PortfolioSparkline from './PortfolioSparkline.jsx';
 import QuickWhatIf from './QuickWhatIf.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 function fmtShort(v) {
   if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
@@ -23,6 +24,9 @@ export default function OverviewPage({
   derivedTotals, totalPort, buckets, rothWindow, dynTaxRate, er,
   activeScen, setActiveTab, fmtC, fmtFull,
 }) {
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
   var sr = parseFloat(successRate) || 0;
 
   var annualExp = (inpWithAssets.monthlyExpenses || 8000) * 12;
@@ -78,13 +82,13 @@ export default function OverviewPage({
   var spouseAge = inpWithAssets.spouseCurrentAge || 63;
   var retirementYear   = 2026 + Math.max(0, retAge - curAge);
   var ssYear           = 2026 + Math.max(0, ssAge - curAge);
-  var staceyMedicare   = 2026 + Math.max(0, 65 - spouseAge);
+  var spouseMedicare   = 2026 + Math.max(0, 65 - spouseAge);
   var rmdYear          = 2026 + Math.max(0, 73 - curAge);
 
   var milestones = [
     { key: 'retirement', year: retirementYear, label: 'Retirement Start', icon: CalendarDays,  isPast: retirementYear <= 2026 },
     { key: 'ss',         year: ssYear,          label: 'Social Security',  icon: DollarSign,    isPast: ssYear <= 2026 },
-    { key: 'medicare',   year: staceyMedicare,  label: 'Stacey Medicare', icon: Heart,          isPast: staceyMedicare <= 2026 },
+    { key: 'medicare',   year: spouseMedicare,  label: 'Spouse Medicare', icon: Heart,          isPast: spouseMedicare <= 2026 },
     { key: 'rmd',        year: rmdYear,          label: 'RMDs Begin',      icon: BarChart2,      isPast: rmdYear <= 2026 },
   ];
 
@@ -123,7 +127,7 @@ export default function OverviewPage({
   // Spending vs. Income bar card
   var cfYear = firstRow.year || 2026;
   var cfAnnualSpend = firstRow.expenses || annualExp;
-  var cfAnnualIncome = (firstRow.scottSS || 0) + (firstRow.staceySS || 0);
+  var cfAnnualIncome = (firstRow.primarySS || 0) + (firstRow.spouseSS || 0);
   var cfGap = Math.max(0, cfAnnualSpend - cfAnnualIncome);
   var incomeBarPct = cfAnnualSpend > 0 ? Math.min((cfAnnualIncome / cfAnnualSpend) * 100, 100) : 0;
 
@@ -134,7 +138,7 @@ export default function OverviewPage({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px', fontFamily: "'Source Sans 3', sans-serif" }}>Overview</h1>
-          <div style={{ fontSize: 14, color: '#6B7280' }}>Scott & Stacey · {monthStr}</div>
+          <div style={{ fontSize: 14, color: '#6B7280' }}>{planLabel} · {monthStr}</div>
         </div>
         <div style={{ fontSize: 13, color: '#9CA3AF' }}>Last updated: Today at {timeStr}</div>
       </div>

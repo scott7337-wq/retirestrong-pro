@@ -8,7 +8,7 @@ import AssetsTab from './components/tabs/Assets';
 import { fetchHoldings, fetchAiInsights as apiFetchAiInsights } from './api.js';
 import { RMD_TABLE, getRMD, MFJ, SGL, STD_DED, ASSET_TYPES, RISK_LEVELS, ACCOUNT_TYPES, RISK_C, TYPE_C, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, DEFAULTS } from './engine/constants.js';
 import { resolveStatus, marginalRate, effectiveTax, totalTaxWithState, combinedMarginalRate, capeBased } from './engine/tax.js';
-import { ssBenefitFactor, ssIncomeForYear, scottSSForYear, staceySSForYear } from './engine/social-security.js';
+import { ssBenefitFactor, ssIncomeForYear, primarySSForYear, spouseSSForYear } from './engine/social-security.js';
 import { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from './engine/roth.js';
 import { buildCashFlow } from './engine/cashflow.js';
 import { runMonteCarlo } from './engine/montecarlo.js';
@@ -71,12 +71,12 @@ function projectForSsAge(inp, er, ssClaimAge) {
   var ssCola = (inp.ssCola || 2.5) / 100;
   var fraMonthlyBase = inp.ssFRA || inp.ssMonthly || 3445;
   var ssMonthlyAtAge = Math.round(fraMonthlyBase * ssBenefitFactor(ssClaimAge));
-  var staceyClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-  var staceyMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
+  var spouseClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
+  var spouseMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
   var status = resolveStatus(inp);
   var stRate = inp.stateTaxRate || 2.5;
-  var ssStartYear = 1959 + ssClaimAge; // Scott born 1959
-  var staceyStartYear = 1962 + staceyClaimAge; // Stacey born 1962
+  var ssStartYear = (inp.birthYear || 1959) + ssClaimAge;
+  var spouseStartYear = (inp.spouseBirthYear || 1962) + spouseClaimAge;
   var data = [];
   for (var y = 0; y <= years; y++) {
     var age = inp.currentAge + y;
@@ -94,12 +94,12 @@ function projectForSsAge(inp, er, ssClaimAge) {
       var ssColaYrs = calYear - ssStartYear;
       income += ssMonthlyAtAge * Math.pow(1 + ssCola, ssColaYrs) * 12;
     }
-    // v13: Stacey SS with actual net figures
+    // v13: Spouse SS with actual net figures
     if (inp.hasSpouse && !inp.survivorMode) {
-      if (calYear === staceyStartYear) income += staceyMonthly * 5;
-      else if (calYear > staceyStartYear) {
-        var spCola = calYear - staceyStartYear;
-        income += staceyMonthly * Math.pow(1 + ssCola, spCola) * 12;
+      if (calYear === spouseStartYear) income += spouseMonthly * 5;
+      else if (calYear > spouseStartYear) {
+        var spCola = calYear - spouseStartYear;
+        income += spouseMonthly * Math.pow(1 + ssCola, spCola) * 12;
       }
     }
     if (age >= inp.pensionStartAge && inp.pensionMonthly > 0) income += inp.pensionMonthly * 12;
@@ -177,8 +177,8 @@ function projectRothBridge(inp, er) {
   var b2DivSweep   = 9300;
   var fraMonthly  = inp.ssFRA || inp.ssMonthly || 3445;
   var ss70Monthly = Math.round(fraMonthly * ssBenefitFactor(70));
-  var spouseBridgeMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
-  var spouseBridgeClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
+  var spouseBridgeMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
+  var spouseBridgeClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
   var ssCola      = (inp.ssCola || 2.5) / 100;
   var top22       = 206700;
   var irmaaLimit  = 212000;
@@ -196,20 +196,20 @@ function projectRothBridge(inp, er) {
     if (y === 3) expenses += inp.extraSpend2028;
     // v13: SS with birth-year-based start
     var calYrBridge = 2026 + y;
-    var ssStartYear = 1959 + ssBridgeAge; // Scott born 1959
+    var ssStartYear = (inp.birthYear || 1959) + ssBridgeAge;
     var ssInc = 0;
     if (calYrBridge === ssStartYear) ssInc = ss70Monthly * 2;
     else if (calYrBridge > ssStartYear) {
       var ssColaYrs = calYrBridge - ssStartYear;
       ssInc = ss70Monthly * Math.pow(1 + ssCola, ssColaYrs) * 12;
     }
-    // v13: Stacey SS with actual net figures
-    var staceyStartYear = 1962 + spouseBridgeClaimAge;
+    // v13: Spouse SS with actual net figures
+    var spouseStartYear = (inp.spouseBirthYear || 1962) + spouseBridgeClaimAge;
     var spSS = 0;
     if (inp.hasSpouse && !inp.survivorMode) {
-      if (calYrBridge === staceyStartYear) spSS = spouseBridgeMonthly * 5;
-      else if (calYrBridge > staceyStartYear) {
-        var spColaYrs2 = calYrBridge - staceyStartYear;
+      if (calYrBridge === spouseStartYear) spSS = spouseBridgeMonthly * 5;
+      else if (calYrBridge > spouseStartYear) {
+        var spColaYrs2 = calYrBridge - spouseStartYear;
         spSS = spouseBridgeMonthly * Math.pow(1 + ssCola, spColaYrs2) * 12;
       }
     }
@@ -319,6 +319,9 @@ function drawGauge(canvas, pct, color) {
 
 // ── DashboardTab component ────────────────────────────────────────────────
 function DashboardTab(props) {
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
   var derivedTotals = props.derivedTotals;
   var bucketCfg = props.bucketCfg;
   var totalPort = props.totalPort;
@@ -520,7 +523,7 @@ function DashboardTab(props) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: '#0f172a' }}>Dashboard</span>
-          <span style={{ fontSize: 11, color: '#64748b' }}>Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+          <span style={{ fontSize: 11, color: '#64748b' }}>{planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={pillStyle('green')}>{dataSource === 'database' ? 'Live from DB' : 'Offline defaults'}</span>
@@ -1640,7 +1643,7 @@ export default function RetireStrongPlanner({ userId }) {
       '• Delay to 70 = '+fmtFull(ssAlt.monthly)+'/mo (+'+fmtFull(ssAlt.monthly - ssCurrentRow.monthly)+'/mo)',
       '• Breakeven age for delay to 70: '+(ssAlt.breakeven||'N/A'),
       '• SS COLA: '+inpWithAssets.ssCola+'%/yr (separate from general inflation)',
-      inpWithAssets.hasSpouse?'• Spouse Stacey (age '+(inpWithAssets.spouseCurrentAge||63)+') SS: '+(inpWithAssets.staceySS63?'Claiming at 63 = $1,472/mo net':'Waiting to 67 = $1,879/mo net')+' (after garnishment)':'',
+      inpWithAssets.hasSpouse?'• Spouse (age '+(inpWithAssets.spouseCurrentAge||63)+') SS: '+(inpWithAssets.spouseEarlyClaim?'Claiming at 63 = $1,472/mo net':'Waiting to 67 = $1,879/mo net')+' (after garnishment)':'',
       inpWithAssets.survivorMode?'• ⚠️ SURVIVOR MODE ACTIVE: Single filing, one SS benefit only':'',
       '',
       'ROTH CONVERSION:',
@@ -1882,13 +1885,13 @@ export default function RetireStrongPlanner({ userId }) {
   var overviewProps = {inp,inpWithAssets,successRate,cashFlow,mcPercentiles,derivedTotals,totalPort,buckets,rothWindow,dynTaxRate,er,activeScen,setActiveTab,fmtC,fmtFull};
 
   function handleWizardComplete(draft) {
-    var birthYear = draft.birthYear || 1959;
-    var currentAge = new Date().getFullYear() - birthYear;
+    var birthYear = draft.birthYear || null;
+    var currentAge = birthYear ? new Date().getFullYear() - birthYear : null;
     var merged = Object.assign({}, flattenPlan({}), {
       birthYear: birthYear,
       currentAge: currentAge,
       hasSpouse: draft.hasSpouse || false,
-      spouseBirthYear: draft.spouseBirthYear || (draft.hasSpouse ? 1962 : DEFAULTS.spouseBirthYear),
+      spouseBirthYear: draft.spouseBirthYear || null,
       ssFRA: draft.ssFRA || WIZARD_DEFAULTS.ssFRA,
       ssAge: draft.ssAge || WIZARD_DEFAULTS.ssAge,
       spouseSSAt67: draft.spouseSSAt67 || DEFAULTS.spouseSSAt67,
@@ -2204,9 +2207,9 @@ export default function RetireStrongPlanner({ userId }) {
               ];
 
               var totalIncome = incFields.reduce(function(s,f){return s + (parseFloat(thisYear[f.key]) || 0);}, 0);
-              var scottSS = scottSSForYear(inpWithAssets, tYear);
-              var staceySS = staceySSForYear(inpWithAssets, tYear);
-              var ssTaxable = (scottSS + staceySS) * 0.85;
+              var primarySS = primarySSForYear(inpWithAssets, tYear);
+              var spouseSS = spouseSSForYear(inpWithAssets, tYear);
+              var ssTaxable = (primarySS + spouseSS) * 0.85;
               var grossTaxable = totalIncome + ssTaxable;
               var stdDed = 29200; // MFJ
               var taxableInc = Math.max(0, grossTaxable - stdDed);
@@ -2246,11 +2249,11 @@ export default function RetireStrongPlanner({ userId }) {
                         </div>
                       );
                     })}
-                    {(scottSS > 0 || staceySS > 0) && (
+                    {(primarySS > 0 || spouseSS > 0) && (
                       <div style={{background:'rgba(52,211,153,.08)',border:'1px solid rgba(52,211,153,.2)',borderRadius:10,padding:12}}>
                         <label style={{fontSize:9,color:TXT2,textTransform:'uppercase',letterSpacing:0.5,display:'block',marginBottom:5}}>Social Security (auto)</label>
-                        <div style={{fontSize:15,fontFamily:PF,fontWeight:700,color:'#34d399',padding:'7px 0'}}>{fmtFull(Math.round(scottSS + staceySS))}</div>
-                        <div style={{fontSize:9,color:TXT3}}>Scott: {fmtC(scottSS)} · Stacey: {fmtC(staceySS)}</div>
+                        <div style={{fontSize:15,fontFamily:PF,fontWeight:700,color:'#34d399',padding:'7px 0'}}>{fmtFull(Math.round(primarySS + spouseSS))}</div>
+                        <div style={{fontSize:9,color:TXT3}}>Primary: {fmtC(primarySS)} · Spouse: {fmtC(spouseSS)}</div>
                       </div>
                     )}
                   </div>
@@ -2537,21 +2540,21 @@ export default function RetireStrongPlanner({ userId }) {
         {activeTab === 'ss' && (
           <div>
             <h2 style={{fontFamily:PF,fontSize:22,color:TXT1,marginBottom:4,fontWeight:600}}>Social Security Strategy</h2>
-            <p style={{fontSize:12,color:TXT2,marginBottom:16}}>Claiming age comparison · Stacey SS toggle · Roth Bridge analysis · Portfolio impact</p>
+            <p style={{fontSize:12,color:TXT2,marginBottom:16}}>Claiming age comparison · Spouse early-claim toggle · Roth Bridge analysis · Portfolio impact</p>
 
-            {/* Stacey SS Toggle */}
+            {/* Spouse SS Toggle */}
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16,background:'rgba(167,139,250,.06)',border:'1px solid rgba(167,139,250,.2)',borderRadius:10,padding:'10px 16px'}}>
-              <span style={{fontSize:12,color:TXT2,fontWeight:600}}>Stacey SS:</span>
-              <button onClick={function(){setField('staceySS63',inp.staceySS63?0:1);}}
-                style={{background:inp.staceySS63?'#a78bfa':'rgba(167,139,250,.15)',border:'1px solid #a78bfa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:inp.staceySS63?'white':'#a78bfa',fontSize:11,fontWeight:700}}>
+              <span style={{fontSize:12,color:TXT2,fontWeight:600}}>Spouse SS:</span>
+              <button onClick={function(){setField('spouseEarlyClaim',inp.spouseEarlyClaim?0:1);}}
+                style={{background:inp.spouseEarlyClaim?'#a78bfa':'rgba(167,139,250,.15)',border:'1px solid #a78bfa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:inp.spouseEarlyClaim?'white':'#a78bfa',fontSize:11,fontWeight:700}}>
                 Age 63 — $1,472/mo
               </button>
-              <button onClick={function(){setField('staceySS63',inp.staceySS63?0:1);}}
-                style={{background:!inp.staceySS63?'#60a5fa':'rgba(96,165,250,.15)',border:'1px solid #60a5fa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:!inp.staceySS63?'white':'#60a5fa',fontSize:11,fontWeight:700}}>
+              <button onClick={function(){setField('spouseEarlyClaim',inp.spouseEarlyClaim?0:1);}}
+                style={{background:!inp.spouseEarlyClaim?'#60a5fa':'rgba(96,165,250,.15)',border:'1px solid #60a5fa',borderRadius:6,padding:'5px 12px',cursor:'pointer',color:!inp.spouseEarlyClaim?'white':'#60a5fa',fontSize:11,fontWeight:700}}>
                 Age 67 — $1,879/mo
               </button>
               <span style={{fontSize:11,color:TXT3,marginLeft:8}}>
-                {inp.staceySS63 ? 'Started Aug 2025 · Lower benefit · Immediate income' : 'Starts Aug 2029 · Higher benefit · Larger gap years'}
+                {inp.spouseEarlyClaim ? 'Lower benefit · Immediate income' : 'Higher benefit · Larger gap years'}
               </span>
             </div>
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:14,marginBottom:22}}>

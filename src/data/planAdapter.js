@@ -45,13 +45,13 @@ export function flattenPlan(plan) {
     // household
     hasSpouse:        _b(household.hasSpouse,        DEFAULTS.hasSpouse),
     spouseCurrentAge: _n(household.spouseCurrentAge, DEFAULTS.spouseCurrentAge),
-    staceySS63:       _b(household.staceySS63,       DEFAULTS.staceySS63),
-    // social security — person 1 (Scott)
+    spouseEarlyClaim: _b(household.spouseEarlyClaim, DEFAULTS.spouseEarlyClaim),
+    // social security — person 1 (primary)
     ssFRA:     _n(ss1.ssFRA,     DEFAULTS.ssFRA),
     ssMonthly: _n(ss1.ssMonthly, DEFAULTS.ssMonthly),
     ssAge:     _n(ss1.ssAge,     DEFAULTS.ssAge),
     ssCola:    _n(ss1.ssCola,    DEFAULTS.ssCola),
-    // social security — person 2 (Stacey)
+    // social security — person 2 (spouse)
     spouseSSAge:       _n(ss2.spouseSSAge,       DEFAULTS.spouseSSAge),
     spouseSSMonthly:   _n(ss2.spouseSSMonthly,   DEFAULTS.spouseSSMonthly),
     spouseSSAt63:      _n(ss2.spouseSSAt63,      DEFAULTS.spouseSSAt63),
@@ -126,7 +126,7 @@ export function buildPlan(inp, assets, bucketCfg, meta) {
     household: {
       hasSpouse:        !!i.hasSpouse,
       spouseCurrentAge: i.spouseCurrentAge,
-      staceySS63:       !!i.staceySS63,
+      spouseEarlyClaim: !!i.spouseEarlyClaim,
     },
     socialSecurity: {
       person1: {

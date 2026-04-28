@@ -152,7 +152,7 @@ function buildStaticContent(props) {
     var gapRows      = cashFlow.filter(function(r) { return r.gap > 0; });
     var firstGapRow  = gapRows[0];
     var totalGap     = gapRows.reduce(function(s, r) { return s + (r.gap || 0); }, 0);
-    var ssRow        = cashFlow.find(function(r) { return r.scottSS > 0; });
+    var ssRow        = cashFlow.find(function(r) { return r.primarySS > 0; });
     var nextRothRow  = cashFlow.find(function(r) { return r.rothConv > 0; });
     return [
       {

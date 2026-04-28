@@ -103,7 +103,7 @@ export default function Settings(props) {
         {[
           {title:'Personal',fields:[['Current Age','currentAge',1],['Retirement Age','retirementAge',1],['Life Expectancy','lifeExpectancy',1]]},
           {title:'Portfolio Summary',isPortfolioSummary:true},
-          {title:'Income',fields:[['Your SS FRA (age 67)','ssFRA',50],['SS COLA %','ssCola',0.1],['Spouse Current Age','spouseCurrentAge',1],['Stacey SS at 63 (net)','spouseSSAt63',50],['Stacey SS at 67 (net)','spouseSSAt67',50],['Spouse SS Age','spouseSSAge',1],['Pension Monthly','pensionMonthly',50],['Part-Time Income/yr','partTimeIncome',1000],['Part-Time Years','partTimeYears',1],['Severance Net','severanceNet',500]]},
+          {title:'Income',fields:[['Your SS FRA (age 67)','ssFRA',50],['SS COLA %','ssCola',0.1],['Spouse Current Age','spouseCurrentAge',1],['Spouse SS at 63 (net)','spouseSSAt63',50],['Spouse SS at 67 (net)','spouseSSAt67',50],['Spouse SS Age','spouseSSAge',1],['Pension Monthly','pensionMonthly',50],['Part-Time Income/yr','partTimeIncome',1000],['Part-Time Years','partTimeYears',1],['Severance Net','severanceNet',500]]},
           {title:'Tax Strategy',fields:[['Conv 2027','conv2027',5000],['Conv 2028','conv2028',5000],['Conv 2029','conv2029',5000],['Conv 2030','conv2030',5000],['Conv 2031','conv2031',5000],['QCD/yr','qcdAmount',500],['QCD Start Age','qcdStartAge',1],['State Tax Rate %','stateTaxRate',0.1]]},
           {title:'Healthcare',fields:[['Phase 1 End Age','healthPhase1EndAge',1],['Phase 2 Annual $','healthPhase2Annual',500],['HC Inflation %','healthInflation',0.01]]},
           {title:'Return Rates',fields:[['Cash/CD/T-Bill %','cashReturnRate',0.1],['TIPS Real Return %','tipsRealReturn',0.1],['Dividend ETF Total %','dividendReturnRate',0.1],['Roth Growth %','rothReturnRate',0.1],['CAPE Ratio','capeRatio',0.5],['10Y Treasury %','tenYrTreasury',0.1],['TIPS Yield %','tipsYield',0.1]]},
@@ -129,12 +129,12 @@ export default function Settings(props) {
                       </div>
                     </label>
                   </div>
-                  <div style={{marginTop:10,background:inp.staceySS63?'rgba(167,139,250,.08)':'rgba(96,165,250,.05)',border:'1px solid '+(inp.staceySS63?'rgba(167,139,250,.3)':'rgba(96,165,250,.15)'),borderRadius:8,padding:'10px 12px'}}>
+                  <div style={{marginTop:10,background:inp.spouseEarlyClaim?'rgba(167,139,250,.08)':'rgba(96,165,250,.05)',border:'1px solid '+(inp.spouseEarlyClaim?'rgba(167,139,250,.3)':'rgba(96,165,250,.15)'),borderRadius:8,padding:'10px 12px'}}>
                     <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
-                      <input type="checkbox" checked={!!inp.staceySS63} onChange={function(e){setField('staceySS63',e.target.checked?1:0);}} style={{accentColor:'#a78bfa'}}/>
+                      <input type="checkbox" checked={!!inp.spouseEarlyClaim} onChange={function(e){setField('spouseEarlyClaim',e.target.checked?1:0);}} style={{accentColor:'#a78bfa'}}/>
                       <div>
-                        <div style={{fontSize:12,color:inp.staceySS63?'#a78bfa':'#60a5fa',fontWeight:700}}>Stacey Claims SS at 63 ($1,472/mo net)</div>
-                        <div style={{fontSize:10,color:TXT3,marginTop:2}}>If unchecked, Stacey waits to 67 ($1,879/mo net). Toggle to compare impact on cash flow and long-range projections.</div>
+                        <div style={{fontSize:12,color:inp.spouseEarlyClaim?'#a78bfa':'#60a5fa',fontWeight:700}}>Spouse claims SS early (at 63)</div>
+                        <div style={{fontSize:10,color:TXT3,marginTop:2}}>If unchecked, spouse waits until FRA (67). Toggle to compare impact on cash flow and long-range projections.</div>
                       </div>
                     </label>
                   </div>

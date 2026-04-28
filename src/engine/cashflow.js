@@ -1,6 +1,6 @@
 // ── RetireStrong Engine: Year-by-Year Cash Flow Projection ────────────────────
-// scottSSForYear = primary person SS; staceySSForYear = spouse SS (backward-compat alias for spouseSSForYear)
-import { scottSSForYear, staceySSForYear } from './social-security.js';
+// primarySSForYear / spouseSSForYear — person-agnostic SS calculations.
+import { primarySSForYear, spouseSSForYear } from './social-security.js';
 import { getRMD } from './constants.js';
 import { rothConvForYear } from './roth.js';
 import { resolveStatus, effectiveTax, combinedMarginalRate } from './tax.js';
@@ -46,9 +46,9 @@ export function buildCashFlow(inpWithAssets, er) {
     if (calYear === 2026) livingBase = inpWithAssets.monthlyExpenses * 8.7 * infMult;
     var expenses = livingBase + extra + healthcare;
 
-    var scottSS  = scottSSForYear(inpWithAssets, calYear);
-    var staceySS = staceySSForYear(inpWithAssets, calYear);
-    var ssIncome = scottSS + staceySS;
+    var primarySS = primarySSForYear(inpWithAssets, calYear);
+    var spouseSS  = spouseSSForYear(inpWithAssets, calYear);
+    var ssIncome  = primarySS + spouseSS;
     var income   = ssIncome;
     if (age >= inpWithAssets.pensionStartAge && inpWithAssets.pensionMonthly > 0) income += inpWithAssets.pensionMonthly * 12;
     if (y < inpWithAssets.partTimeYears && inpWithAssets.partTimeIncome > 0) income += inpWithAssets.partTimeIncome;
@@ -112,7 +112,7 @@ export function buildCashFlow(inpWithAssets, er) {
       iraBalance:     Math.round(iraCash + iraTips + iraDividend + iraGrowth),
       rothBalance:    Math.round(roth),
       taxableBalance: Math.round(taxable),
-      scottSS:  Math.round(scottSS),  staceySS: Math.round(staceySS),
+      primarySS: Math.round(primarySS), spouseSS: Math.round(spouseSS),
       income:   Math.round(income),   ssIncome: Math.round(ssIncome),
       expenses: Math.round(expenses), healthcare: Math.round(healthcare),
       living:   Math.round(livingBase + extra),

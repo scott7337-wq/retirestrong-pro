@@ -1,10 +1,14 @@
 import React from 'react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function SpendingTab({ ctx }) {
   var { inp, setField, fmtC, fmtFull,
         inpWithAssets, monthlySpend, updateMonthSpend, derivedTotals,
         BORDER, BORDER2, TTip } = ctx;
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
 
@@ -27,7 +31,7 @@ export default function SpendingTab({ ctx }) {
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>Spending</h1>
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
-            Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            {planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

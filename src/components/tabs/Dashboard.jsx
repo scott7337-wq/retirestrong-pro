@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { Chart } from 'chart.js';
 import { ssIncomeForYear } from '../../engine/social-security.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 function drawGauge(canvas, pct, color) {
   if (!canvas) return;
@@ -25,6 +26,9 @@ function drawGauge(canvas, pct, color) {
 export default function DashboardTab({ ctx }) {
   var { derivedTotals, bucketCfg, totalPort, assets, successRate,
         mcPercentiles, cashFlow, inp, dataSource, setActiveTab } = ctx;
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   var donutRef = useRef(null);
   var gauge1Ref = useRef(null);
@@ -203,7 +207,7 @@ export default function DashboardTab({ ctx }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: '#0f172a' }}>Dashboard</span>
-          <span style={{ fontSize: 11, color: '#64748b' }}>Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+          <span style={{ fontSize: 11, color: '#64748b' }}>{planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={pillStyle('green')}>{dataSource === 'database' ? 'Live from DB' : 'Offline defaults'}</span>

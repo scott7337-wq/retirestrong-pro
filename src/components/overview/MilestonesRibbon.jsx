@@ -3,8 +3,8 @@ import { Calendar, DollarSign, Heart, BarChart2 } from 'lucide-react';
 
 var TOOLTIPS = {
   retirement: 'Retirement begins — living on portfolio + SS income. B1 cash buffer active.',
-  ss:         'Social Security benefits start. Scott\'s monthly benefit locks in based on claim age.',
-  medicare:   'Stacey turns 65 and enrolls in Medicare. Healthcare costs shift from Phase 1 to Phase 2 rates.',
+  ss:         'Social Security benefits start. Your monthly benefit locks in based on claim age.',
+  medicare:   'Spouse turns 65 and enrolls in Medicare. Healthcare costs shift from Phase 1 to Phase 2 rates.',
   rmd:        'Required Minimum Distributions begin at age 73 (SECURE 2.0). Must withdraw IRA minimums annually.',
 };
 

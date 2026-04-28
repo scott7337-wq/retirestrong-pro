@@ -20,7 +20,7 @@ function YearInput({ label, value, onChange, placeholder }) {
         type="number"
         min={1940}
         max={1975}
-        placeholder={placeholder || 'e.g. 1959'}
+        placeholder={placeholder || 'e.g. 1958'}
         value={value || ''}
         onChange={function(e) { onChange(e.target.value ? parseInt(e.target.value, 10) : null); }}
         style={{
@@ -73,7 +73,7 @@ export default function Step1Identity({ draft, onUpdate, onNext }) {
         label="Your birth year"
         value={localBirth}
         onChange={setLocalBirth}
-        placeholder="e.g. 1959"
+        placeholder="e.g. 1958"
       />
 
       {/* Spouse toggle */}
@@ -117,7 +117,7 @@ export default function Step1Identity({ draft, onUpdate, onNext }) {
           label="Partner's birth year"
           value={localSpouseBirth}
           onChange={setLocalSpouseBirth}
-          placeholder="e.g. 1962"
+          placeholder="e.g. 1963"
         />
       )}
 

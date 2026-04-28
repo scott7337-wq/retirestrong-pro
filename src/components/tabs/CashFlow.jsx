@@ -13,7 +13,7 @@ function DetailSection({ row, fmtC }) {
   var fmt = fmtC || fmtShort;
 
   // Source-of-funds stacked bar
-  var ssIncome = (row.scottSS || 0) + (row.staceySS || 0) + (row.pension || 0);
+  var ssIncome = (row.primarySS || 0) + (row.spouseSS || 0) + (row.pension || 0);
   var otherInc = (row.otherIncome || 0);
   var portDraw = (row.fromIRA || 0) + (row.fromRoth || 0) + (row.fromTaxable || 0);
   var totalNeeds = (row.expenses || 0) + (row.healthcare || 0);
@@ -23,8 +23,8 @@ function DetailSection({ row, fmtC }) {
   var portPct = (portDraw / base) * 100;
 
   var incomeItems = [];
-  if (row.scottSS > 0) incomeItems.push('Scott SS ' + fmt(row.scottSS));
-  if (row.staceySS > 0) incomeItems.push('Stacey SS ' + fmt(row.staceySS));
+  if (row.primarySS > 0) incomeItems.push('Primary SS ' + fmt(row.primarySS));
+  if (row.spouseSS > 0) incomeItems.push('Spouse SS ' + fmt(row.spouseSS));
   if (row.pension > 0) incomeItems.push('Pension ' + fmt(row.pension));
   if (row.otherIncome > 0) incomeItems.push('Other ' + fmt(row.otherIncome));
 
@@ -117,9 +117,9 @@ export default function CashFlowTab({ ctx }) {
       }
     }
 
-    // SS/Medicare Start: first year scottSS > 0
+    // SS/Medicare Start: first year primarySS > 0
     for (var j = 0; j < cashFlow.length; j++) {
-      if ((cashFlow[j].scottSS || 0) > 0) {
+      if ((cashFlow[j].primarySS || 0) > 0) {
         cards.push({ year: cashFlow[j].year, label: 'SS / Medicare', sub: 'Income floor activates · Watch IRMAA brackets', color: '#0A4D54', bg: '#E8F5F2', border: '#A7D9D4' });
         break;
       }
@@ -243,7 +243,7 @@ export default function CashFlowTab({ ctx }) {
             </thead>
             <tbody>
               {(cashFlow || []).map(function(row, i) {
-                var income = (row.scottSS || 0) + (row.staceySS || 0) + (row.pension || 0) + (row.otherIncome || 0);
+                var income = (row.primarySS || 0) + (row.spouseSS || 0) + (row.pension || 0) + (row.otherIncome || 0);
                 var totalExp = (row.expenses || 0) + (row.healthcare || 0);
                 var gap = totalExp - income;
                 var gapPct = totalExp > 0 ? gap / totalExp : 0;

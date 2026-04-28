@@ -7,8 +7,8 @@ import { runMonteCarlo } from '../../engine/montecarlo.js';
 var TEAL = '#0A4D54';
 
 function buildWizardInp(draft) {
-  var birthYear = draft.birthYear || 1959;
-  var currentAge = new Date().getFullYear() - birthYear;
+  var birthYear = draft.birthYear || null;
+  var currentAge = birthYear ? new Date().getFullYear() - birthYear : null;
   var derivedTotals = {
     taxable: draft.taxable || 0,
     iraCash: 0,
@@ -21,7 +21,7 @@ function buildWizardInp(draft) {
     birthYear: birthYear,
     currentAge: currentAge,
     hasSpouse: draft.hasSpouse || false,
-    spouseBirthYear: draft.spouseBirthYear || (draft.hasSpouse ? 1962 : null),
+    spouseBirthYear: draft.spouseBirthYear || null,
     ssFRA: draft.ssFRA || 3445,
     ssAge: draft.ssAge || 67,
     spouseSSAt67: draft.spouseSSAt67 || 1879,

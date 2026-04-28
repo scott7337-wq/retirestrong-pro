@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { ChevronRight, ChevronDown, Plus, Edit2, ArrowRightLeft } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 // ── Color maps ────────────────────────────────────────────────────────────────
 var COMP_COLORS = {
@@ -442,6 +443,9 @@ export default function PortfolioPage({
   setMoveAssetId, moveAssetToBucket, fmtC, fmtFull, inp,
 }) {
   var fmt = fmtFull || fmtShort;
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   return (
     <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
@@ -449,7 +453,7 @@ export default function PortfolioPage({
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>Portfolio</h1>
         <div style={{ fontSize: 14, color: '#6B7280' }}>
-          Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+          {planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           {(unassigned || []).length > 0 && (
             <span style={{ marginLeft: 12, color: '#8B3528', fontWeight: 500 }}>
               · {(unassigned || []).length} unassigned

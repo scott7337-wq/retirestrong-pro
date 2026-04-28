@@ -1,10 +1,14 @@
 import React from 'react';
-import { scottSSForYear, staceySSForYear } from '../../engine/social-security.js';
+import { primarySSForYear, spouseSSForYear } from '../../engine/social-security.js';
 import { effectiveTax } from '../../engine/tax.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function IncomeTaxTab({ ctx }) {
   var { inp, inpWithAssets, thisYear, updateThisYear, setField, fmtC, fmtFull,
         BORDER, BORDER2, TTip } = ctx;
+  var authCtx = useAuth();
+  var authUser = authCtx ? authCtx.user : null;
+  var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
 
@@ -16,7 +20,7 @@ export default function IncomeTaxTab({ ctx }) {
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>Income &amp; Tax</h1>
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
-            Scott &amp; Stacey · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            {planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -50,9 +54,9 @@ export default function IncomeTaxTab({ ctx }) {
         ];
 
         var totalIncome = incFields.reduce(function(s, f) { return s + (parseFloat(thisYear[f.key]) || 0); }, 0);
-        var scottSS = scottSSForYear(inpWithAssets, tYear);
-        var staceySS = staceySSForYear(inpWithAssets, tYear);
-        var ssTaxable = (scottSS + staceySS) * 0.85;
+        var primarySS = primarySSForYear(inpWithAssets, tYear);
+        var spouseSS = spouseSSForYear(inpWithAssets, tYear);
+        var ssTaxable = (primarySS + spouseSS) * 0.85;
         var grossTaxable = totalIncome + ssTaxable;
         var stdDed = 29200;
         var taxableInc = Math.max(0, grossTaxable - stdDed);
@@ -182,15 +186,15 @@ export default function IncomeTaxTab({ ctx }) {
                     </div>
                   );
                 })}
-                {(scottSS > 0 || staceySS > 0) && (
+                {(primarySS > 0 || spouseSS > 0) && (
                   <div style={{ background: '#E8F5F2', border: '1px solid #A7D9D4', borderRadius: 10, padding: 12 }}>
                     <label style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5, fontWeight: 600 }}>
                       Social Security (auto)
                     </label>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#0A4D54', padding: '7px 0' }}>
-                      {(fmtFull || fmtC)(Math.round(scottSS + staceySS))}
+                      {(fmtFull || fmtC)(Math.round(primarySS + spouseSS))}
                     </div>
-                    <div style={{ fontSize: 11, color: '#6B7280' }}>Scott: {fmtC(scottSS)} · Stacey: {fmtC(staceySS)}</div>
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>Primary: {fmtC(primarySS)} · Spouse: {fmtC(spouseSS)}</div>
                   </div>
                 )}
               </div>

@@ -34,23 +34,23 @@ export const DEFAULT_PLAN = {
   household: {
     hasSpouse:        { type: 'boolean', default: true,  required: false, label: 'Has spouse' },
     spouseCurrentAge: { type: 'number',  default: 63,    required: false, label: 'Spouse current age' },
-    staceySS63:       { type: 'boolean', default: false, required: false, label: 'Stacey claims SS at 63' },
+    spouseEarlyClaim: { type: 'boolean', default: false, required: false, label: 'Spouse claims SS at 63' },
   },
 
   // ── Social Security ────────────────────────────────────────────────────────
   // Maps to DB: social_security table (two rows, person 1 and 2)
   socialSecurity: {
     person1: {
-      ssFRA:     { type: 'number', default: 3445, required: true,  label: 'Scott FRA PIA at age 67 ($/mo)' },
+      ssFRA:     { type: 'number', default: 3445, required: true,  label: 'Primary FRA PIA at age 67 ($/mo)' },
       ssMonthly: { type: 'number', default: 3445, required: true,  label: 'SS monthly at claiming age ($/mo)' },
-      ssAge:     { type: 'number', default: 70,   required: true,  label: 'Scott SS claim age' },
+      ssAge:     { type: 'number', default: 70,   required: true,  label: 'Primary SS claim age' },
       ssCola:    { type: 'number', default: 2.5,  required: false, label: 'SS COLA rate (%)' },
     },
     person2: {
-      spouseSSAge:       { type: 'number',  default: 67,   required: false, label: 'Stacey SS claim age' },
-      spouseSSMonthly:   { type: 'number',  default: 1879, required: false, label: 'Stacey SS at FRA ($/mo net)' },
-      spouseSSAt63:      { type: 'number',  default: 1472, required: false, label: 'Stacey SS at 63 ($/mo net)' },
-      spouseSSAt67:      { type: 'number',  default: 1879, required: false, label: 'Stacey SS at 67 ($/mo net)' },
+      spouseSSAge:       { type: 'number',  default: 67,   required: false, label: 'Spouse SS claim age' },
+      spouseSSMonthly:   { type: 'number',  default: 1879, required: false, label: 'Spouse SS at FRA ($/mo net)' },
+      spouseSSAt63:      { type: 'number',  default: 1472, required: false, label: 'Spouse SS at 63 ($/mo net)' },
+      spouseSSAt67:      { type: 'number',  default: 1879, required: false, label: 'Spouse SS at 67 ($/mo net)' },
       spouseSSIsSpousal: { type: 'boolean', default: false, required: false, label: 'Use spousal benefit calc' },
     },
   },

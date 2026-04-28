@@ -1,4 +1,7 @@
 // ── RetireStrong Engine: Social Security ──────────────────────────────────────
+// Person-agnostic: primary = the user, spouse = optional partner. Birth years
+// must come from the profile; missing values surface as NaN/0 rather than
+// silently substituting a fixed year.
 
 export function ssBenefitFactor(claimAge) {
   var fra = 67;
@@ -12,7 +15,7 @@ export function ssIncomeForYear(inp, calYear) {
   var ssCola = (inp.ssCola || 2.5) / 100;
   var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
   var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var birthYear = inp.birthYear || 1959;
+  var birthYear = inp.birthYear;
   var yourStartYear = birthYear + inp.ssAge;
   var yourSS = 0;
   if (calYear === yourStartYear) {
@@ -23,9 +26,9 @@ export function ssIncomeForYear(inp, calYear) {
   }
   var spouseSS = 0;
   if (inp.hasSpouse && !inp.survivorMode) {
-    var spouseBirthYear = inp.spouseBirthYear || 1962;
-    var spouseClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-    var spouseMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
+    var spouseBirthYear = inp.spouseBirthYear;
+    var spouseClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
+    var spouseMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
     var spouseStartYear = spouseBirthYear + spouseClaimAge;
     if (calYear === spouseStartYear) {
       spouseSS = spouseMonthly * 5;
@@ -38,11 +41,11 @@ export function ssIncomeForYear(inp, calYear) {
   return yourSS + spouseSS;
 }
 
-export function scottSSForYear(inp, calYear) {
+export function primarySSForYear(inp, calYear) {
   var ssCola = (inp.ssCola || 2.5) / 100;
   var fraBase = inp.ssFRA || inp.ssMonthly || 3445;
   var yourMonthly = Math.round(fraBase * ssBenefitFactor(inp.ssAge));
-  var birthYear = inp.birthYear || 1959;
+  var birthYear = inp.birthYear;
   var yourStartYear = birthYear + inp.ssAge;
   if (calYear === yourStartYear) return yourMonthly * 2;
   if (calYear > yourStartYear) return yourMonthly * Math.pow(1 + ssCola, calYear - yourStartYear) * 12;
@@ -52,14 +55,11 @@ export function scottSSForYear(inp, calYear) {
 export function spouseSSForYear(inp, calYear) {
   if (!inp.hasSpouse || inp.survivorMode) return 0;
   var ssCola = (inp.ssCola || 2.5) / 100;
-  var spouseBirthYear = inp.spouseBirthYear || 1962;
-  var spouseClaimAge = inp.staceySS63 ? 63 : (inp.spouseSSAge || 67);
-  var spouseMonthly = inp.staceySS63 ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
+  var spouseBirthYear = inp.spouseBirthYear;
+  var spouseClaimAge = inp.spouseEarlyClaim ? 63 : (inp.spouseSSAge || 67);
+  var spouseMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
   var spouseStartYear = spouseBirthYear + spouseClaimAge;
   if (calYear === spouseStartYear) return spouseMonthly * 5;
   if (calYear > spouseStartYear) return spouseMonthly * Math.pow(1 + ssCola, calYear - spouseStartYear) * 12;
   return 0;
 }
-
-// Backward-compatible alias — existing imports of staceySSForYear continue to work
-export var staceySSForYear = spouseSSForYear;

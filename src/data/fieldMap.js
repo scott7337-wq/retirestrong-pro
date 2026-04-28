@@ -26,13 +26,13 @@ export const FIELD_MAP = {
   // ── household
   hasSpouse:        { domain: 'household', planPath: 'household.hasSpouse',        apiRoute: '/api/profile', apiField: null },
   spouseCurrentAge: { domain: 'household', planPath: 'household.spouseCurrentAge', apiRoute: '/api/profile', apiField: null },
-  staceySS63:       { domain: 'household', planPath: 'household.staceySS63',       apiRoute: '/api/profile', apiField: null },
-  // ── social security — person 1 (Scott)
+  spouseEarlyClaim: { domain: 'household', planPath: 'household.spouseEarlyClaim', apiRoute: '/api/profile', apiField: null },
+  // ── social security — person 1 (primary)
   ssFRA:     { domain: 'socialSecurity', planPath: 'socialSecurity.person1.ssFRA',     apiRoute: '/api/social_security/1', apiField: 'fra_pia_monthly' },
   ssMonthly: { domain: 'socialSecurity', planPath: 'socialSecurity.person1.ssMonthly', apiRoute: '/api/social_security/1', apiField: 'fra_pia_monthly' },
   ssAge:     { domain: 'socialSecurity', planPath: 'socialSecurity.person1.ssAge',     apiRoute: '/api/social_security/1', apiField: 'claiming_age'    },
   ssCola:    { domain: 'socialSecurity', planPath: 'socialSecurity.person1.ssCola',    apiRoute: '/api/social_security/1', apiField: 'cola_rate'       },
-  // ── social security — person 2 (Stacey)
+  // ── social security — person 2 (spouse)
   spouseSSAge:       { domain: 'socialSecurity', planPath: 'socialSecurity.person2.spouseSSAge',       apiRoute: '/api/social_security/2', apiField: 'claiming_age'    },
   spouseSSMonthly:   { domain: 'socialSecurity', planPath: 'socialSecurity.person2.spouseSSMonthly',   apiRoute: '/api/social_security/2', apiField: 'fra_pia_monthly' },
   spouseSSAt63:      { domain: 'socialSecurity', planPath: 'socialSecurity.person2.spouseSSAt63',      apiRoute: '/api/social_security/2', apiField: null              },
