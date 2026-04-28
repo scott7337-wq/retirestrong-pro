@@ -77,7 +77,7 @@ function ToolCallsRow({ toolCalls }) {
 function ChatMessage({ msg, onChipClick }) {
   const isUser = msg.role === 'user';
   return (
-    <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
+    <div className={isUser ? undefined : 'rs-msg-ai'} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
       <div style={{ maxWidth: '95%' }}>
         <div style={{
           background: isUser ? COLORS.tealDark : COLORS.cardBg,
@@ -152,10 +152,13 @@ export default function AIInsightsRail(props) {
   const scrollRef    = useRef(null);
   const textareaRef  = useRef(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Scroll the last AI message into view, not the chips at bottom
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!scrollRef.current) return;
+    const aiMessages = scrollRef.current.querySelectorAll('.rs-msg-ai');
+    if (aiMessages.length > 0) {
+      const lastAiMsg = aiMessages[aiMessages.length - 1];
+      lastAiMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [messages, isLoading]);
 

@@ -205,7 +205,8 @@ Rules:
 - Stay in scope: tax, SS timing, Roth conversions, withdrawal sequencing, spending. Decline anything else politely.
 - If the user asks something you can't answer from their plan, say so directly.
 - Suggest 2-3 follow-up chips at the end of responses where the conversation has obvious next moves.
-- Format chips as: [CHIPS: chip1 | chip2 | chip3] at the very end of your response.`;
+- Format chips as: [CHIPS: chip1 | chip2 | chip3] at the very end of your response.
+- Never say "Let me pull that up" or similar filler before calling a tool. Call the tool silently and respond with the result directly.`;
 
     // ── Tool definitions ───────────────────────────────────────────────────
     const tools = [
@@ -426,6 +427,17 @@ Rules:
 async function executeToolCall(toolName, input, plan, userId, pool) {
   switch (toolName) {
     case 'read_plan': {
+      // Estimate current-year MAGI from plan inputs
+      // MAGI = IRA withdrawals + 85% of SS + Roth conversions
+      // We don't have live YTD figures yet, so estimate from plan
+      const ssMonthly = parseFloat(plan.ss_monthly) || 0;
+      const ssAge = parseInt(plan.ss_age) || 70;
+      const currentAge = parseInt(plan.current_age) || 66;
+      const ssAnnual = (currentAge >= ssAge) ? ssMonthly * 12 : 0;
+      const estimatedMAGI = Math.round(ssAnnual * 0.85);
+      // Note: this is a floor estimate — excludes IRA draws and conversions
+      // which depend on what the user actually does this year
+
       return {
         currentAge:      plan.current_age,
         retirementAge:   plan.retirement_age,
@@ -437,6 +449,9 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
         inflationRate:   plan.inflation_rate || 3.0,
         lifeExpectancy:  plan.life_expectancy || 90,
         totalPortfolio:  plan.total_portfolio,
+        estimatedMAGI,
+        estimatedMAGINote: "Floor estimate based on SS only. Add planned IRA withdrawals and Roth conversions for full MAGI.",
+        ssAnnualIncome: Math.round(ssAnnual),
       };
     }
 
