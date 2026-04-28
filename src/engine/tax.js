@@ -1,8 +1,6 @@
-import { RMD_TABLE, MFJ, SGL, STD_DED } from './constants.js';
+// ── RetireStrong Engine: Tax Calculations ─────────────────────────────────────
+import { MFJ, SGL, STD_DED } from './constants.js';
 
-export const getRMD = function(age) { return RMD_TABLE[Math.min(age,90)] || 12.2; };
-
-// v12: resolve filing status — survivorMode overrides to single
 export function resolveStatus(inp) {
   return inp.survivorMode ? 'single' : (inp.filingStatus || 'married');
 }
@@ -32,10 +30,8 @@ export function effectiveTax(gross, status) {
   return tax;
 }
 
-// v12: Total tax including AZ state (applies to non-SS taxable income)
 export function totalTaxWithState(gross, status, stateTaxRate, ssIncome) {
   var fedTax = effectiveTax(gross, status);
-  // AZ flat tax applies to taxable income minus SS (AZ doesn't tax SS)
   var stateGross = Math.max(0, gross - (ssIncome || 0));
   var stateDed = STD_DED[status] || 29200;
   var stateTaxable = Math.max(0, stateGross - stateDed);
@@ -43,7 +39,14 @@ export function totalTaxWithState(gross, status, stateTaxRate, ssIncome) {
   return fedTax + stateTax;
 }
 
-// v12: Combined marginal rate (federal + state)
 export function combinedMarginalRate(gross, status, stateTaxRate) {
   return marginalRate(gross, status) + (stateTaxRate / 100);
+}
+
+export function capeBased(cape, tenYr, tips) {
+  return {
+    stock: (1 / cape) + 0.02,
+    bond: tenYr / 100,
+    inflation: Math.max(0.015, tenYr / 100 - tips / 100)
+  };
 }

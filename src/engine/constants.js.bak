@@ -74,7 +74,6 @@ export var DEFAULT_BUCKET_CONFIG = [
 
 export var DEFAULTS = {
   currentAge:66, retirementAge:67, lifeExpectancy:90,
-  birthYear:1959, spouseBirthYear:1962,
   taxableBal:83000,
   iraBalCash:176000,
   iraBalTips:315000,
@@ -117,10 +116,6 @@ export var DEFAULTS = {
   rothReturnRate:7.0,
   capeRatio:28.5, tenYrTreasury:4.2, tipsYield:1.8,
   stockVol:18.0, bondVol:6.0, correlation:0.15,
-  seqStressYears:0, seqStressEquityDrop:0.15,
-  seqStressInflationYears:0, seqStressInflationAdd:0,
-  seqStressType:'market',
-  scenarioInsight:'',
   housingMonthly:2200, foodMonthly:1200, transportMonthly:600, travelMonthly:1200, otherMonthly:2800,
   legacyGoal:500000,
   trackingYear:2026,
