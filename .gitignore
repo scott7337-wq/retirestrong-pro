@@ -27,3 +27,14 @@ npm-debug.log*
 
 # Claude Code's own files (we'll un-ignore these later if we want)
 .claude/
+
+# Backup files
+*.bak
+*.bak2
+
+# Screenshots and binary assets not source of truth
+screenshot_*.png
+*.xlsx
+
+# Orphan files
+/App.jsx
