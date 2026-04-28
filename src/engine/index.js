@@ -6,3 +6,4 @@ export { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from '.
 export { buildCashFlow } from './cashflow.js';
 export { runMonteCarlo } from './montecarlo.js';
 export { fmtC, fmtFull, fmtPct } from './format.js';
+export { applyLeversToInp, computeYearSpending } from './levers.js';

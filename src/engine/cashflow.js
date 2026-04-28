@@ -4,54 +4,62 @@ import { primarySSForYear, spouseSSForYear } from './social-security.js';
 import { getRMD } from './constants.js';
 import { rothConvForYear } from './roth.js';
 import { resolveStatus, effectiveTax, combinedMarginalRate } from './tax.js';
+import { applyLeversToInp, computeYearSpending } from './levers.js';
 
 /**
- * buildCashFlow(inpWithAssets, er)
+ * buildCashFlow(inpWithAssets, er, options)
  * Pure function — takes plan inputs and expected-return object, returns the
  * year-by-year projection array. Called from App.jsx inside a useMemo.
  *
  * @param {object} inpWithAssets - merged inp + asset balances
  * @param {object} er            - { inflation, equityReturn, ... } from capeBased()
+ * @param {object} [options]     - { spendingPolicy?, leverOverlays? }
+ *                                 Default {} — no behavior change vs. old 2-arg form.
  * @returns {Array<object>}      - one row per year from currentAge to lifeExpectancy
  */
-export function buildCashFlow(inpWithAssets, er) {
+export function buildCashFlow(inpWithAssets, er, options = {}) {
+  // Apply lever overlays to produce a derived inp — never mutates the original.
+  // When leverOverlays is empty, applyLeversToInp returns the same reference.
+  const { spendingPolicy = null, leverOverlays = [] } = options;
+  const derived = applyLeversToInp(inpWithAssets, leverOverlays);
+
   var data = [];
-  var taxable    = inpWithAssets.taxableBal + (inpWithAssets.severanceNet || 0);
-  var iraCash    = inpWithAssets.iraBalCash;
-  var iraTips    = inpWithAssets.iraBalTips;
-  var iraDividend = inpWithAssets.iraBalDividend;
-  var iraGrowth  = inpWithAssets.iraBalGrowth;
-  var roth       = inpWithAssets.rothBal;
-  var years      = inpWithAssets.lifeExpectancy - inpWithAssets.currentAge;
+  var taxable    = derived.taxableBal + (derived.severanceNet || 0);
+  var iraCash    = derived.iraBalCash;
+  var iraTips    = derived.iraBalTips;
+  var iraDividend = derived.iraBalDividend;
+  var iraGrowth  = derived.iraBalGrowth;
+  var roth       = derived.rothBal;
+  var years      = derived.lifeExpectancy - derived.currentAge;
   var inf   = er.inflation;
-  var cR    = inpWithAssets.cashReturnRate    / 100;
-  var tR    = inf + inpWithAssets.tipsRealReturn / 100;
-  var dvR   = inpWithAssets.dividendReturnRate / 100;
-  var grR   = inpWithAssets.growthReturnRate   / 100;
-  var roR   = inpWithAssets.rothReturnRate     / 100;
-  var status = resolveStatus(inpWithAssets);
-  var stRate = inpWithAssets.stateTaxRate || 2.5;
+  var cR    = derived.cashReturnRate    / 100;
+  var tR    = inf + derived.tipsRealReturn / 100;
+  var dvR   = derived.dividendReturnRate / 100;
+  var grR   = derived.growthReturnRate   / 100;
+  var roR   = derived.rothReturnRate     / 100;
+  var status = resolveStatus(derived);
+  var stRate = derived.stateTaxRate || 2.5;
 
   for (var y = 0; y <= years; y++) {
-    var age     = inpWithAssets.currentAge + y;
+    var age     = derived.currentAge + y;
     var calYear = 2026 + y;
     var infMult = Math.pow(1 + inf, y);
-    var extra   = (calYear === 2027 ? inpWithAssets.extraSpend2027 : 0)
-                + (calYear === 2028 ? inpWithAssets.extraSpend2028 : 0);
-    var hcInflMult = Math.pow(1 + inpWithAssets.healthInflation, y);
-    var healthcare = (age < inpWithAssets.healthPhase1EndAge)
-      ? inpWithAssets.healthPhase1Annual * hcInflMult
-      : inpWithAssets.healthPhase2Annual * hcInflMult;
-    var livingBase = inpWithAssets.monthlyExpenses * 12 * infMult;
-    if (calYear === 2026) livingBase = inpWithAssets.monthlyExpenses * 8.7 * infMult;
+    var extra   = (calYear === 2027 ? derived.extraSpend2027 : 0)
+                + (calYear === 2028 ? derived.extraSpend2028 : 0);
+    var hcInflMult = Math.pow(1 + derived.healthInflation, y);
+    var healthcare = (age < derived.healthPhase1EndAge)
+      ? derived.healthPhase1Annual * hcInflMult
+      : derived.healthPhase2Annual * hcInflMult;
+    var livingBase = computeYearSpending(spendingPolicy, age, y, derived, infMult);
+    if (calYear === 2026) livingBase = livingBase * (8.7 / 12);
     var expenses = livingBase + extra + healthcare;
 
-    var primarySS = primarySSForYear(inpWithAssets, calYear);
-    var spouseSS  = spouseSSForYear(inpWithAssets, calYear);
+    var primarySS = primarySSForYear(derived, calYear);
+    var spouseSS  = spouseSSForYear(derived, calYear);
     var ssIncome  = primarySS + spouseSS;
     var income   = ssIncome;
-    if (age >= inpWithAssets.pensionStartAge && inpWithAssets.pensionMonthly > 0) income += inpWithAssets.pensionMonthly * 12;
-    if (y < inpWithAssets.partTimeYears && inpWithAssets.partTimeIncome > 0) income += inpWithAssets.partTimeIncome;
+    if (age >= derived.pensionStartAge && derived.pensionMonthly > 0) income += derived.pensionMonthly * 12;
+    if (y < derived.partTimeYears && derived.partTimeIncome > 0) income += derived.partTimeIncome;
 
     var gap    = Math.max(0, expenses - income);
     var iraSum = iraCash + iraTips + iraDividend + iraGrowth;
@@ -80,7 +88,7 @@ export function buildCashFlow(inpWithAssets, er) {
     roth         = wd(roth,         0);
     fromRoth     = preRoth - roth;
 
-    var rothConv      = rothConvForYear(inpWithAssets, calYear);
+    var rothConv      = rothConvForYear(derived, calYear);
     var convFromGrowth = Math.min(iraGrowth, rothConv);
     var convRemain    = rothConv - convFromGrowth;
     var convFromDiv   = Math.min(iraDividend, convRemain);
@@ -96,10 +104,10 @@ export function buildCashFlow(inpWithAssets, er) {
     taxable = Math.max(0, taxable - convTax);
 
     var ssTaxable = ssIncome * 0.85;
-    var magi      = ssTaxable + fromIRA + rothConv + (inpWithAssets.pensionMonthly * 12);
+    var magi      = ssTaxable + fromIRA + rothConv + (derived.pensionMonthly * 12);
     var irmaaHit  = magi > 212000;
 
-    var qcd = (age >= inpWithAssets.qcdStartAge) ? Math.min(inpWithAssets.qcdAmount, iraSum * 0.05) : 0;
+    var qcd = (age >= derived.qcdStartAge) ? Math.min(derived.qcdAmount, iraSum * 0.05) : 0;
     var qcdFromCash = Math.min(iraCash, qcd);
     var qcdFromDiv  = Math.min(iraDividend, qcd - qcdFromCash);
     iraCash     -= qcdFromCash;

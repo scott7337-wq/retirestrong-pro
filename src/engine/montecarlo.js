@@ -3,9 +3,10 @@ import { ssIncomeForYear } from './social-security.js';
 import { getRMD } from './constants.js';
 import { rothConvForYear } from './roth.js';
 import { resolveStatus, effectiveTax } from './tax.js';
+import { applyLeversToInp, computeYearSpending } from './levers.js';
 
 /**
- * runMonteCarlo(inpWithAssets, er, derivedTotals)
+ * runMonteCarlo(inpWithAssets, er, derivedTotals, options)
  * Runs 500 simulations of the bucket-aware withdrawal strategy.
  * Pure function — no side effects. Called from App.jsx inside a useMemo.
  *
@@ -20,21 +21,27 @@ import { resolveStatus, effectiveTax } from './tax.js';
  * @param {object} inpWithAssets  - merged inp + asset balances
  * @param {object} er             - { inflation, ... } from capeBased()
  * @param {object} derivedTotals  - { taxable, iraCash, iraTips, iraDividend, iraGrowth, roth }
+ * @param {object} [options]      - { spendingPolicy?, leverOverlays? }
+ *                                  Default {} — no behavior change vs. old 3-arg form.
  * @returns {Array<{total, b1, b2, b3}>} - one entry per simulation
  */
-export function runMonteCarlo(inpWithAssets, er, derivedTotals) {
-  var years  = inpWithAssets.lifeExpectancy - inpWithAssets.currentAge;
+export function runMonteCarlo(inpWithAssets, er, derivedTotals, options = {}) {
+  // Apply lever overlays to produce a derived inp — never mutates the original.
+  // When leverOverlays is empty, applyLeversToInp returns the same reference.
+  const { spendingPolicy = null, leverOverlays = [] } = options;
+  const derived = applyLeversToInp(inpWithAssets, leverOverlays);
+
+  var years  = derived.lifeExpectancy - derived.currentAge;
   var results = [];
-  var cR    = inpWithAssets.cashReturnRate    / 100;
-  var tR    = er.inflation + inpWithAssets.tipsRealReturn / 100;
-  var dvR   = inpWithAssets.dividendReturnRate / 100;
-  var grR   = inpWithAssets.growthReturnRate   / 100;
-  var roR   = inpWithAssets.rothReturnRate     / 100;
-  var stockVol = inpWithAssets.stockVol / 100;
+  var cR    = derived.cashReturnRate    / 100;
+  var tR    = er.inflation + derived.tipsRealReturn / 100;
+  var dvR   = derived.dividendReturnRate / 100;
+  var grR   = derived.growthReturnRate   / 100;
+  var roR   = derived.rothReturnRate     / 100;
+  var stockVol = derived.stockVol / 100;
   var divVol   = stockVol * 0.55;
   var tipsVol  = 0.03;
-  var annualExp = inpWithAssets.monthlyExpenses * 12;
-  var retireY   = inpWithAssets.retirementAge - inpWithAssets.currentAge;
+  var retireY  = derived.retirementAge - derived.currentAge;
 
   // TIPS maturity schedule — ratios represent a 3-tranche ladder (Apr 2028 / Jul 2031 / Jul 2034).
   // The 107/103/105 split reflects the reference household's actual TIPS ladder proportions.
@@ -60,7 +67,7 @@ export function runMonteCarlo(inpWithAssets, er, derivedTotals) {
     var b3bals = [b3growth + roth];
 
     for (var y = 1; y <= years; y++) {
-      var age2    = inpWithAssets.currentAge + y;
+      var age2    = derived.currentAge + y;
       var calYear2 = 2026 + y;
 
       // Box-Muller random returns
@@ -72,30 +79,31 @@ export function runMonteCarlo(inpWithAssets, er, derivedTotals) {
       var retCash  = cR;
       var retTips  = tR  + tipsVol * zt;
       var retDiv   = dvR + divVol  * zd;
-      var stressYrs  = inpWithAssets.seqStressYears     || 0;
-      var stressDrop = inpWithAssets.seqStressEquityDrop || 0.15;
+      var stressYrs  = derived.seqStressYears     || 0;
+      var stressDrop = derived.seqStressEquityDrop || 0.15;
       var meanGrowth = (stressYrs > 0 && y <= stressYrs) ? (grR - stressDrop) : grR;
       var retGrowth  = meanGrowth + stockVol * z;
       var retRoth    = (meanGrowth * 1.0) + stockVol * z * 1.05;
       var marketUp   = retGrowth > 0;
       var bearYear   = retGrowth < -0.10;
-      var stressType    = inpWithAssets.seqStressType || 'market';
+      var stressType    = derived.seqStressType || 'market';
       var stressYear    = stressYrs > 0 && y <= stressYrs;
       var protectedYear = bearYear || (stressYear && stressType === 'market');
 
       // Income
-      var inc2 = ssIncomeForYear(inpWithAssets, calYear2);
-      if (age2 >= inpWithAssets.pensionStartAge) inc2 += inpWithAssets.pensionMonthly * 12;
+      var inc2 = ssIncomeForYear(derived, calYear2);
+      if (age2 >= derived.pensionStartAge) inc2 += derived.pensionMonthly * 12;
 
       // Expenses
-      var inflStressYrs = inpWithAssets.seqStressInflationYears || 0;
-      var inflAdd       = inpWithAssets.seqStressInflationAdd   || 0;
+      var inflStressYrs = derived.seqStressInflationYears || 0;
+      var inflAdd       = derived.seqStressInflationAdd   || 0;
       var effInfl = (inflStressYrs > 0 && y <= inflStressYrs) ? er.inflation + inflAdd : er.inflation;
-      var hcMC = (age2 < inpWithAssets.healthPhase1EndAge)
-        ? inpWithAssets.healthPhase1Annual * Math.pow(1 + inpWithAssets.healthInflation, y)
-        : inpWithAssets.healthPhase2Annual * Math.pow(1 + inpWithAssets.healthInflation, y);
-      var exp2     = inpWithAssets.monthlyExpenses * 12 * Math.pow(1 + effInfl, y) + hcMC;
-      var oneYrExp = annualExp * Math.pow(1 + effInfl, y);
+      var infMult2 = Math.pow(1 + effInfl, y);
+      var hcMC = (age2 < derived.healthPhase1EndAge)
+        ? derived.healthPhase1Annual * Math.pow(1 + derived.healthInflation, y)
+        : derived.healthPhase2Annual * Math.pow(1 + derived.healthInflation, y);
+      var exp2     = computeYearSpending(spendingPolicy, age2, y, derived, infMult2) + hcMC;
+      var oneYrExp = computeYearSpending(spendingPolicy, age2, y, derived, infMult2);
 
       // RMDs
       var iraSum2 = b1cash + b2tips + b2div + b3growth;
@@ -147,7 +155,7 @@ export function runMonteCarlo(inpWithAssets, er, derivedTotals) {
       }
 
       // STEP 7: Roth conversions
-      var rothConv2       = rothConvForYear(inpWithAssets, calYear2);
+      var rothConv2       = rothConvForYear(derived, calYear2);
       var mcConvFromGrowth = Math.min(b3growth, rothConv2);
       var mcConvRemain    = rothConv2 - mcConvFromGrowth;
       var mcConvFromDiv   = Math.min(b2div, mcConvRemain);
@@ -155,14 +163,14 @@ export function runMonteCarlo(inpWithAssets, er, derivedTotals) {
       var mcConvFromCash  = Math.min(b1cash, mcConvRemain);
       b3growth -= mcConvFromGrowth; b2div -= mcConvFromDiv; b1cash -= mcConvFromCash;
       roth     += mcConvFromGrowth + mcConvFromDiv + mcConvFromCash;
-      var mcStatus  = resolveStatus(inpWithAssets);
+      var mcStatus  = resolveStatus(derived);
       var mcConvTax = rothConv2 > 0
-        ? (effectiveTax(inc2 + rothConv2, mcStatus) - effectiveTax(inc2, mcStatus)) + rothConv2 * (inpWithAssets.stateTaxRate / 100)
+        ? (effectiveTax(inc2 + rothConv2, mcStatus) - effectiveTax(inc2, mcStatus)) + rothConv2 * (derived.stateTaxRate / 100)
         : 0;
       taxable = Math.max(0, taxable - mcConvTax);
 
       // STEP 8: QCD from IRA
-      var qcd2         = (age2 >= inpWithAssets.qcdStartAge) ? Math.min(inpWithAssets.qcdAmount, iraSum2 * 0.05) : 0;
+      var qcd2         = (age2 >= derived.qcdStartAge) ? Math.min(derived.qcdAmount, iraSum2 * 0.05) : 0;
       var qcd2FromCash = Math.min(b1cash, qcd2);
       var qcd2FromDiv  = Math.min(b2div, qcd2 - qcd2FromCash);
       b1cash -= qcd2FromCash;
