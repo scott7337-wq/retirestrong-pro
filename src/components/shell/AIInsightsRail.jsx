@@ -19,7 +19,8 @@ const COLORS = {
   red:          '#DC2626',
 };
 
-const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '';
+// Chat fetch uses a relative URL — Vite dev server proxies /api → :3101 (see
+// vite.config.js). In production, /api is served by the same origin.
 
 // Initial greeting — static, no API call. Brief Step 3 (3).
 const INITIAL_GREETING = {
@@ -193,7 +194,7 @@ export default function AIInsightsRail(props) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(API_BASE + '/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
