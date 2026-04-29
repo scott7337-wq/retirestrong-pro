@@ -31,11 +31,11 @@ export default function AppShell({ sidebar, activeTab, ctx, children }) {
 
       <main style={{
         flex: 1,
-        overflowY: activeTab === 'coach' ? 'hidden' : 'auto',
-        overflow: activeTab === 'coach' ? 'hidden' : undefined,
-        background: 'var(--rs-bg-page)',
         minWidth: 0,
         minHeight: 0,
+        overflowX: 'hidden',
+        overflowY: activeTab === 'coach' ? 'hidden' : 'auto',
+        background: 'var(--rs-bg-page)',
         display: activeTab === 'coach' ? 'flex' : 'block',
         flexDirection: activeTab === 'coach' ? 'column' : undefined,
       }}>

@@ -813,9 +813,15 @@ app.post('/api/scenarios/pin', async (req, res) => {
       `INSERT INTO scenarios
          (user_id, name, description, is_working, applied_levers,
           spending_policy, is_default, is_active)
-       VALUES ($1, $2, $3, false, $4, $5, false, true)
+       VALUES ($1, $2, $3, false, $4::jsonb, $5::jsonb, false, true)
        RETURNING scenario_id, name`,
-      [req.userId, name, note || name, ws.applied_levers, ws.spending_policy]
+      [
+        req.userId,
+        name,
+        note || name,
+        JSON.stringify(ws.applied_levers || []),
+        ws.spending_policy ? JSON.stringify(ws.spending_policy) : null,
+      ]
     );
 
     await pool.query(
