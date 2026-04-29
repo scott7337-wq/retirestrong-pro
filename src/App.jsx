@@ -966,12 +966,14 @@ export default function RetireStrongPlanner({ userId }) {
     fetch('/api/income_tracking?user_id=' + uid + '&year=' + actYear)
       .then(function(r) { return r.json(); })
       .then(function(obj) {
+        console.log('[income LOAD] response:', obj);
         if (obj && typeof obj === 'object' && !obj.error) {
           setThisYear(function(prev) {
             var patch = {};
             ['incW2','incSeverance','incIRA','incRothConv','incOther','incDividends'].forEach(function(k) {
               if (obj[k] !== undefined) patch[k] = parseFloat(obj[k]) || 0;
             });
+            console.log('[income LOAD] patching:', patch);
             return Object.assign({}, prev, patch);
           });
         }
@@ -1264,7 +1266,7 @@ export default function RetireStrongPlanner({ userId }) {
       fetch('/api/income_tracking/' + encodeURIComponent(key), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: new Date().getFullYear(), amount: parseFloat(val) || 0 }),
+        body: JSON.stringify({ user_id: authUser.user_id, year: new Date().getFullYear(), amount: parseFloat(val) || 0 }),
       }).catch(function(err) { console.warn('income tracking save failed:', err); });
     }
   }, [authUser]);
