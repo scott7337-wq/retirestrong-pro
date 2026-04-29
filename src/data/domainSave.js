@@ -61,6 +61,12 @@ export async function saveProfile(inp) {
       survivor_mode:     !!inp.survivorMode,
       monthly_spending:  inp.monthlyExpenses,
       general_inflation: inp.inflationRate,
+      pension_monthly:   inp.pensionMonthly,
+      part_time_income:  inp.partTimeIncome,
+      part_time_years:   inp.partTimeYears,
+      legacy_goal:       inp.legacyGoal,
+      extra_spend_2027:  inp.extraSpend2027,
+      extra_spend_2028:  inp.extraSpend2028,
     })
   });
 }

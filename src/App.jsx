@@ -998,6 +998,12 @@ export default function RetireStrongPlanner({ userId }) {
         set('lifeExpectancy',  p.life_expectancy);
         set('monthlyExpenses', p.monthly_spending);
         set('stateTaxRate',    p.state_tax_rate);
+        set('pensionMonthly',  p.pension_monthly);
+        set('partTimeIncome',  p.part_time_income);
+        set('partTimeYears',   p.part_time_years);
+        set('legacyGoal',      p.legacy_goal);
+        set('extraSpend2027',  p.extra_spend_2027);
+        set('extraSpend2028',  p.extra_spend_2028);
         // DB stores 'mfj', app uses 'married'
         if (p.filing_status) {
           var fs = p.filing_status === 'mfj' ? 'married' : 'single';
@@ -1006,6 +1012,26 @@ export default function RetireStrongPlanner({ userId }) {
         if (p.survivor_mode !== undefined) {
           inpPatch.survivorMode = p.survivor_mode ? 1 : 0;
           rawPatch.survivorMode = p.survivor_mode ? '1' : '0';
+        }
+        // Derive ages from DOBs stored in profiles
+        if (p.person1_dob) {
+          var dob1 = new Date(p.person1_dob);
+          var today = new Date();
+          var age1 = Math.floor((today - dob1) / (365.25 * 24 * 60 * 60 * 1000));
+          set('currentAge', age1);
+          inpPatch.birthYear = dob1.getFullYear(); rawPatch.birthYear = String(dob1.getFullYear());
+        }
+        if (p.person2_dob) {
+          var dob2 = new Date(p.person2_dob);
+          var age2 = Math.floor((new Date() - dob2) / (365.25 * 24 * 60 * 60 * 1000));
+          set('spouseCurrentAge', age2);
+          inpPatch.spouseBirthYear = dob2.getFullYear(); rawPatch.spouseBirthYear = String(dob2.getFullYear());
+        }
+        if (p.retirement_date && p.person1_dob) {
+          var retDate = new Date(p.retirement_date);
+          var dob1r = new Date(p.person1_dob);
+          var retAge = Math.floor((retDate - dob1r) / (365.25 * 24 * 60 * 60 * 1000));
+          set('retirementAge', retAge);
         }
       }
 
@@ -1141,7 +1167,9 @@ export default function RetireStrongPlanner({ userId }) {
   // The exact 6 fields saveProfile writes — checked in setField
   var PROFILE_AUTOSAVE_FIELDS = useRef(new Set([
     'lifeExpectancy', 'filingStatus', 'stateTaxRate',
-    'survivorMode', 'monthlyExpenses', 'inflationRate'
+    'survivorMode', 'monthlyExpenses', 'inflationRate',
+    'pensionMonthly', 'partTimeIncome', 'partTimeYears',
+    'legacyGoal', 'extraSpend2027', 'extraSpend2028',
   ]));
 
   // ── Social Security autosave (Phase 2D) ───────────────────────────────────

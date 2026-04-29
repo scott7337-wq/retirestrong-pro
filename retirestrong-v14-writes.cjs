@@ -47,7 +47,9 @@ module.exports = function addV14Writes(app, pool) {
       'person1_name', 'person1_dob', 'person2_name', 'person2_dob',
       'filing_status', 'state_code', 'state_tax_rate', 'state_ss_exempt',
       'life_expectancy', 'monthly_spending', 'general_inflation',
-      'retirement_date', 'base_year', 'survivor_mode', 'surviving_person'
+      'retirement_date', 'base_year', 'survivor_mode', 'surviving_person',
+      'pension_monthly', 'part_time_income', 'part_time_years',
+      'legacy_goal', 'extra_spend_2027', 'extra_spend_2028',
     ];
     const sets = [];
     const vals = [u];
