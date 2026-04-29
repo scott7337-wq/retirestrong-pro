@@ -228,6 +228,82 @@ function PinModal({ workingScenario, onConfirm, onCancel }) {
   );
 }
 
+// ── Tab-specific static insights (shown before first user message) ──────────
+const TAB_INSIGHTS = {
+  dashboard: {
+    title: 'Plan Status',
+    bullets: [
+      'Check your success rate and years funded above.',
+      'IRMAA headroom and bracket room update monthly.',
+      'Ask me anything about your plan below.',
+    ],
+    action: null,
+  },
+  buckets: {
+    title: 'Portfolio Health',
+    bullets: [
+      'Bucket 1 should cover 2–3 years of spending.',
+      'Rebalance signals appear when allocations drift >5%.',
+      'Dividend and TIPS holdings reduce sequence risk.',
+    ],
+    action: null,
+  },
+  cashflow: {
+    title: 'Cash Flow',
+    bullets: [
+      'The gap years before SS are your sequence risk window.',
+      'Roth conversions in these years reduce future RMDs.',
+      'Click any year in the table to see source-of-funds detail.',
+    ],
+    action: null,
+  },
+  monte: {
+    title: 'Stress Testing',
+    bullets: [
+      'Bad First Five Years is your most relevant stress test.',
+      'A 15% spending cut in a downturn often saves the plan.',
+      'Guardrails strategies automate this adjustment.',
+    ],
+    action: null,
+  },
+  spending: {
+    title: 'Spending',
+    bullets: [
+      'Essential expenses should be covered by guaranteed income.',
+      'Discretionary spending is your primary adjustment lever.',
+      'YTD actual vs budget trend shows if you\'re on track.',
+    ],
+    action: null,
+  },
+  incometax: {
+    title: 'Tax Efficiency',
+    bullets: [
+      'IRMAA headroom is your most actionable number right now.',
+      'Convert to the top of your bracket before RMDs begin.',
+      'IRA draws count toward MAGI — sequence matters.',
+    ],
+    action: { label: 'Ask about conversions', text: 'How much should I convert this year?' },
+  },
+  roth: {
+    title: 'Roth Window',
+    bullets: [
+      'Your conversion window closes when RMDs begin at 73.',
+      'The survivor tax cliff makes conversions more valuable now.',
+      'IRMAA Tier 1 at $212k MAGI is your binding constraint.',
+    ],
+    action: { label: 'Calculate my optimal conversion', text: 'What is my optimal Roth conversion this year?' },
+  },
+  settings: {
+    title: 'Assumptions',
+    bullets: [
+      'Monthly expenses drive every projection — get this right.',
+      'Return assumptions use CAPE-based estimates.',
+      'Inflation at 3% is conservative — adjust if needed.',
+    ],
+    action: null,
+  },
+};
+
 // ── Main rail component ─────────────────────────────────────────────────────
 // Props:
 //   activeTab — current plan tab (string), sent to server for context
@@ -243,6 +319,8 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
   const textareaRef = useRef(null);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinToast, setPinToast]         = useState(false);
+
+  const hasUserMessage = messages.some(m => m.role === 'user');
 
   // Auto-resize textarea (1-3 lines)
   useEffect(() => {
@@ -307,7 +385,9 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
         borderBottom: '2px solid rgba(10,77,84,0.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.tealDark }}>✦ Ask RetireStrong</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.tealDark }}>
+          {hasUserMessage ? '✦ Ask RetireStrong' : '✦ Insights'}
+        </span>
         <div title={isLoading ? 'Working…' : 'Ready'} style={{
           width: 7, height: 7, borderRadius: '50%',
           background: isLoading ? COLORS.amber : COLORS.tealMid,
@@ -321,35 +401,79 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
         onPin={() => setShowPinModal(true)}
       />
 
-      {/* Chat log */}
-      <div ref={chatLogRef} style={{
-        flex: 1, overflowY: 'auto', padding: '12px 14px',
-      }}>
-        {tokenWarning && (
-          <div style={{
-            background: COLORS.amberLight, border: '1px solid ' + COLORS.amber,
-            borderRadius: 6, padding: 8, marginBottom: 10,
-            fontSize: 11, color: '#78350F', lineHeight: 1.4,
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>Long conversation</div>
-            <div>Start fresh for best results.</div>
-            <button
-              onClick={clearSession}
-              style={{
-                marginTop: 6, fontSize: 11, padding: '3px 8px',
-                background: COLORS.tealDark, color: '#FFFFFF',
-                border: 'none', borderRadius: 4, cursor: 'pointer',
-              }}
-            >New chat</button>
-          </div>
-        )}
+      {/* Static insights or chat log */}
+      {!hasUserMessage ? (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {(() => {
+            const insight = TAB_INSIGHTS[activeTab] || TAB_INSIGHTS.dashboard;
+            return (
+              <>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.06em', color: COLORS.textMuted, marginBottom: 10,
+                }}>{insight.title}</div>
+                <ul style={{
+                  listStyle: 'none', padding: 0, margin: '0 0 16px',
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  {insight.bullets.map((b, i) => (
+                    <li key={i} style={{
+                      fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5,
+                      paddingLeft: 12, borderLeft: '2px solid ' + COLORS.border,
+                    }}>{b}</li>
+                  ))}
+                </ul>
+                {insight.action && (
+                  <button
+                    onClick={() => sendMessage(insight.action.text)}
+                    style={{
+                      width: '100%', background: COLORS.tealDark, color: 'white',
+                      border: 'none', borderRadius: 8, padding: '9px 14px',
+                      fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left',
+                    }}
+                  >{insight.action.label} →</button>
+                )}
+                <div style={{
+                  marginTop: 16, padding: '10px 12px',
+                  background: '#F2F1EC', borderRadius: 8,
+                  fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5,
+                }}>
+                  Ask me anything about your plan — I have full context and can run projections.
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      ) : (
+        <div ref={chatLogRef} style={{
+          flex: 1, overflowY: 'auto', padding: '12px 14px',
+        }}>
+          {tokenWarning && (
+            <div style={{
+              background: COLORS.amberLight, border: '1px solid ' + COLORS.amber,
+              borderRadius: 6, padding: 8, marginBottom: 10,
+              fontSize: 11, color: '#78350F', lineHeight: 1.4,
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Long conversation</div>
+              <div>Start fresh for best results.</div>
+              <button
+                onClick={clearSession}
+                style={{
+                  marginTop: 6, fontSize: 11, padding: '3px 8px',
+                  background: COLORS.tealDark, color: '#FFFFFF',
+                  border: 'none', borderRadius: 4, cursor: 'pointer',
+                }}
+              >New chat</button>
+            </div>
+          )}
 
-        {messages.map((m, i) => (
-          <ChatMessage key={i} msg={m} onChipClick={text => { sendMessage(text); }} />
-        ))}
+          {messages.map((m, i) => (
+            <ChatMessage key={i} msg={m} onChipClick={text => { sendMessage(text); }} />
+          ))}
 
-        {isLoading && <LoadingDots />}
-      </div>
+          {isLoading && <LoadingDots />}
+        </div>
+      )}
 
       {/* Composer */}
       <div style={{

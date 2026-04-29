@@ -1994,7 +1994,11 @@ export default function RetireStrongPlanner({ userId }) {
       )}
 
       {activeTab === 'coach'
-        ? <CoachTab ctx={tabCtx} />
+        ? (
+          <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <CoachTab ctx={tabCtx} />
+          </div>
+        )
         : activeTab === 'dashboard'
         ? <OverviewPage {...overviewProps} />
         : <div style={{background:SURFACE,borderRadius:16,padding:28,border:'1px solid '+BORDER,boxShadow:SHADOW,margin:'0 0 0 0'}}>

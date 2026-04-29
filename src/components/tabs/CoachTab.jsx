@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -463,18 +463,21 @@ export default function CoachTab({ ctx }) {
   const [namedScenarios, setNamedScenarios] = useState([]);
   const [activeScenarioId, setActiveScenarioId] = useState('base');
 
-  // Load named scenarios from DB
-  useEffect(() => {
+  const refreshScenarios = useCallback(async () => {
     if (!authUser?.user_id) return;
-    fetch('/api/scenarios?user_id=' + authUser.user_id)
-      .then(r => r.json())
-      .then(data => {
-        if (data.scenarios) {
-          setNamedScenarios(data.scenarios.filter(s => !s.is_working));
-        }
-      })
-      .catch(() => {});
-  }, [authUser?.user_id, workingScenario]);
+    try {
+      const res = await fetch('/api/scenarios?user_id=' + authUser.user_id);
+      const data = await res.json();
+      if (data.scenarios) {
+        setNamedScenarios(data.scenarios.filter(s => !s.is_working));
+      }
+    } catch (e) {}
+  }, [authUser?.user_id]);
+
+  // Load named scenarios on mount and when workingScenario changes
+  useEffect(() => {
+    refreshScenarios();
+  }, [authUser?.user_id, refreshScenarios]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -507,6 +510,7 @@ export default function CoachTab({ ctx }) {
     }
     setWorkingScenario(null);
     setShowPinModal(false);
+    await refreshScenarios();
     setPinToast(true);
     setTimeout(() => setPinToast(false), 2500);
   }
