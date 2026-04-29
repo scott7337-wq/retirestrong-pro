@@ -28,10 +28,6 @@ export default function AppShell({ sidebar, activeTab, children }) {
     }}>
       {sidebar}
 
-      {showRail && (
-        <AIInsightsRail activeTab={activeTab} />
-      )}
-
       <main style={{
         flex: 1,
         overflowY: 'auto',
@@ -40,6 +36,10 @@ export default function AppShell({ sidebar, activeTab, children }) {
       }}>
         {children}
       </main>
+
+      {showRail && (
+        <AIInsightsRail activeTab={activeTab} />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ var NAV_GROUPS = [
       { id: 'buckets',    label: 'Portfolio',    Icon: Layers },
       { id: 'cashflow',   label: 'Plan',         Icon: TrendingUp },
       { id: 'monte',      label: 'Stress Test',  Icon: Activity },
+      { id: 'coach',      label: 'Coach',        Icon: MessageSquare },
     ],
   },
   {
@@ -24,12 +25,6 @@ var NAV_GROUPS = [
     label: 'SETTINGS',
     items: [
       { id: 'settings',   label: 'Assumptions',  Icon: Settings },
-    ],
-  },
-  {
-    label: 'AI',
-    items: [
-      { id: 'coach',      label: 'Coach',        Icon: MessageSquare },
     ],
   },
 ];
