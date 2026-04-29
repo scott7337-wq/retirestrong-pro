@@ -11,22 +11,19 @@ export default function SpendingTab({ ctx }) {
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
-  var API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '';
 
   var saveActualsState = useState('idle');
   var saveStatus = saveActualsState[0]; var setSaveStatus = saveActualsState[1];
 
   function handleSaveActuals() {
-    if (!authUser) return;
     setSaveStatus('saving');
     var year = new Date().getFullYear();
     var monthKeys = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
     var saves = monthKeys.map(function(m) {
-      var amount = monthlySpend[m] || 0;
-      return fetch(API_BASE + '/api/spending_actuals/' + m, {
+      return fetch('/api/spending_actuals/' + m, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year: year, amount: amount, user_id: authUser.user_id }),
+        body: JSON.stringify({ year: year, amount: monthlySpend[m] || 0 }),
       });
     });
     Promise.all(saves)
