@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-// Token tokens (matching tokens.css). Hardcoded to keep the rail self-contained
-// and to match the existing app palette without inline CSS-var fallbacks.
+// Token values (matching tokens.css). Hardcoded to keep the rail self-contained.
 const COLORS = {
   bg:           '#F5F3EF',
   border:       '#E8E4DC',
@@ -19,10 +18,9 @@ const COLORS = {
   red:          '#DC2626',
 };
 
-// Chat fetch uses a relative URL — Vite dev server proxies /api → :3101 (see
-// vite.config.js). In production, /api is served by the same origin.
+// Chat fetch uses a relative URL — Vite dev server proxies /api → :3101.
 
-// Initial greeting — static, no API call. Brief Step 3 (3).
+// Initial greeting — static, no API call.
 const INITIAL_GREETING = {
   role: 'assistant',
   content: 'Your plan is loaded. What do you want to think through today?',
@@ -136,10 +134,11 @@ function LoadingDots() {
 }
 
 // ── Main rail component ─────────────────────────────────────────────────────
-// Props: activeTab is consumed; other props are accepted for backward
-// compatibility with App.jsx but unused (the static-cards model is gone).
-export default function AIInsightsRail(props) {
-  const activeTab = props.activeTab || 'overview';
+// Props:
+//   activeTab              — current plan tab (string)
+//   workingScenario        — controlled from AppShell (null | object)
+//   onWorkingScenarioChange — callback to lift working scenario state up
+export default function AIInsightsRail({ activeTab = 'overview', workingScenario, onWorkingScenarioChange }) {
   const authCtx = useAuth();
   const userId = authCtx?.user?.user_id || null;
 
@@ -148,10 +147,9 @@ export default function AIInsightsRail(props) {
   const [sessionId, setSessionId]       = useState(null);
   const [isLoading, setIsLoading]       = useState(false);
   const [tokenWarning, setTokenWarning] = useState(false);
-  const [workingScenario, setWorkingScenario] = useState(null);
 
-  const scrollRef    = useRef(null);
-  const textareaRef  = useRef(null);
+  const scrollRef   = useRef(null);
+  const textareaRef = useRef(null);
 
   // Scroll the last AI message into view, not the chips at bottom
   useEffect(() => {
@@ -168,7 +166,7 @@ export default function AIInsightsRail(props) {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 84) + 'px'; // ~3 lines
+    ta.style.height = Math.min(ta.scrollHeight, 84) + 'px';
   }, [inputText]);
 
   const sendMessage = useCallback(async (text) => {
@@ -183,14 +181,10 @@ export default function AIInsightsRail(props) {
       return;
     }
 
-    // Build the conversation history for the API (drop chips/toolCalls/isInitial,
-    // strip any stray initial greeting from the wire payload — Anthropic just
-    // wants {role, content}).
     const historyForApi = [...messages, { role: 'user', content: trimmed }]
       .filter((m) => !m.isInitial)
       .map((m) => ({ role: m.role, content: m.content }));
 
-    // Optimistically add user message, set loading
     setMessages((prev) => [...prev, {
       role: 'user', content: trimmed, chips: [], toolCalls: [],
     }]);
@@ -205,7 +199,7 @@ export default function AIInsightsRail(props) {
           messages:  historyForApi,
           sessionId,
           activeTab,
-          user_id:   userId,  // required by /api middleware
+          user_id:   userId,
         }),
       });
       const data = await res.json();
@@ -222,7 +216,10 @@ export default function AIInsightsRail(props) {
       }]);
 
       if (data.sessionId) setSessionId(data.sessionId);
-      setWorkingScenario(data.workingScenario || null);
+      // Lift working scenario state up to AppShell
+      if (onWorkingScenarioChange) {
+        onWorkingScenarioChange(data.workingScenario || null);
+      }
       if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
         setTokenWarning(true);
       }
@@ -235,20 +232,15 @@ export default function AIInsightsRail(props) {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, sessionId, activeTab, userId, isLoading]);
+  }, [messages, sessionId, activeTab, userId, isLoading, onWorkingScenarioChange]);
 
   const startNewChat = useCallback(() => {
     setMessages([INITIAL_GREETING]);
     setSessionId(null);
     setTokenWarning(false);
     setInputText('');
-    setWorkingScenario(null);
-  }, []);
-
-  async function discardWorkingScenario() {
-    setWorkingScenario(null);
-    await sendMessage('Discard the working scenario');
-  }
+    if (onWorkingScenarioChange) onWorkingScenarioChange(null);
+  }, [onWorkingScenarioChange]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -259,14 +251,15 @@ export default function AIInsightsRail(props) {
 
   return (
     <div style={{
-      width: 240, minWidth: 240, flexShrink: 0,
-      background: COLORS.bg, borderLeft: '1px solid ' + COLORS.border,
-      height: '100vh', display: 'flex', flexDirection: 'column',
+      width: '100%',
+      background: COLORS.bg,
+      borderRight: '1px solid ' + COLORS.border,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
     }}>
-      <style>{`
-        @keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }
-        @keyframes rsPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(1.3); } }
-      `}</style>
+      <style>{`@keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }`}</style>
 
       {/* Header */}
       <div style={{
@@ -282,48 +275,6 @@ export default function AIInsightsRail(props) {
           background: isLoading ? COLORS.amber : COLORS.tealMid,
         }} />
       </div>
-
-      {/* Working scenario diff strip */}
-      {workingScenario && (
-        <div style={{
-          background: '#FBF0E3',
-          borderBottom: '1px solid ' + COLORS.border,
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          fontSize: 12,
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: COLORS.amber, display: 'inline-block', flexShrink: 0,
-              animation: 'rsPulse 1.6s infinite',
-            }} />
-            <span style={{ fontWeight: 600, color: COLORS.amber, flexShrink: 0 }}>
-              What-if
-            </span>
-            <span style={{
-              color: COLORS.textSecondary, overflow: 'hidden',
-              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {workingScenario.description}
-            </span>
-          </div>
-          <button
-            onClick={discardWorkingScenario}
-            style={{
-              background: 'transparent',
-              border: '1px solid ' + COLORS.border,
-              borderRadius: 4, padding: '2px 8px',
-              fontSize: 11, color: COLORS.textMuted,
-              cursor: 'pointer', flexShrink: 0,
-            }}
-          >Discard</button>
-        </div>
-      )}
 
       {/* Chat log */}
       <div ref={scrollRef} style={{

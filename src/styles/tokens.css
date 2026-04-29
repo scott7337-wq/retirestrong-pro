@@ -23,4 +23,28 @@
   --rs-blue:           #2563EB;
   --rs-green:          #059669;
   --rs-red:            #DC2626;
+
+  /* ── Phase B layout tokens ── */
+  --rs-working:        #B8651A;
+  --rs-working-bg:     #FBF0E3;
+  --rs-working-border: #D97706;
+  --rs-surface-2:      #FBFBF9;
+  --rs-surface-3:      #F2F1EC;
+
+  /* ── Mode toggle ── */
+  --rs-mode-active-bg:     #FFFFFF;
+  --rs-mode-active-shadow: 0 1px 2px rgba(40,37,29,0.08);
+}
+
+@keyframes rsSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes rsFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes rsPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.3); }
 }

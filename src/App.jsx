@@ -23,7 +23,6 @@ import PortfolioPage from './components/tabs/PortfolioPage.jsx';
 import SpendingTab from './components/tabs/SpendingTab.jsx';
 import AppShell from './components/shell/AppShell.jsx';
 import Sidebar from './components/shell/Sidebar.jsx';
-import AIInsightsRail from './components/shell/AIInsightsRail.jsx';
 import OverviewPage from './components/overview/OverviewPage.jsx';
 import OnboardingWizard from './components/onboarding/OnboardingWizard.jsx';
 import { useAuth } from './context/AuthContext.jsx';
@@ -1972,23 +1971,7 @@ export default function RetireStrongPlanner({ userId }) {
             logout={authLogout}
           />
         }
-        rail={
-          <AIInsightsRail
-            inp={inp}
-            inpWithAssets={inpWithAssets}
-            successRate={successRate}
-            cashFlow={cashFlow}
-            derivedTotals={derivedTotals}
-            totalPort={totalPort}
-            buckets={buckets}
-            rothWindow={rothWindow}
-            dynTaxRate={dynTaxRate}
-            activeScen={activeScen}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            fmtC={fmtC}
-          />
-        }
+        activeTab={activeTab}
       >
         <AssetEditorModal />
         <MoveBucketModal />

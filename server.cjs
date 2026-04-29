@@ -781,6 +781,55 @@ app.get('/api/holdings', async (req, res) => {
   }
 });
 
+// ── Scenario endpoints ────────────────────────────────────────────────────────
+app.delete('/api/scenarios/working', async (req, res) => {
+  try {
+    await pool.query(
+      `DELETE FROM scenarios WHERE user_id = $1 AND is_working = true`,
+      [req.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Discard working scenario error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/scenarios/pin', async (req, res) => {
+  const { name, note } = req.body;
+  try {
+    const wsResult = await pool.query(
+      `SELECT scenario_id, applied_levers, spending_policy
+       FROM scenarios
+       WHERE user_id = $1 AND is_working = true`,
+      [req.userId]
+    );
+    if (!wsResult.rows[0]) {
+      return res.status(404).json({ error: 'No working scenario' });
+    }
+    const ws = wsResult.rows[0];
+
+    const newScenario = await pool.query(
+      `INSERT INTO scenarios
+         (user_id, name, description, is_working, applied_levers,
+          spending_policy, is_default, is_active)
+       VALUES ($1, $2, $3, false, $4, $5, false, true)
+       RETURNING scenario_id, name`,
+      [req.userId, name, note || name, ws.applied_levers, ws.spending_policy]
+    );
+
+    await pool.query(
+      `DELETE FROM scenarios WHERE user_id = $1 AND is_working = true`,
+      [req.userId]
+    );
+
+    res.json({ success: true, scenario: newScenario.rows[0] });
+  } catch (err) {
+    console.error('Pin scenario error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
   try {
