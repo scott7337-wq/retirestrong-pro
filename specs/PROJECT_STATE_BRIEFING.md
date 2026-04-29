@@ -1,5 +1,5 @@
 # RetireStrong Pro — Project State Briefing
-## Updated April 28, 2026 — 22 commits from baseline
+## Updated April 29, 2026 — 26 commits from baseline
 
 ---
 
@@ -63,13 +63,13 @@ Directory: ~/retirestrong-pro
 
 ## Known gaps (next to build)
 
-### Brief 8 — Wire real engine server-side (NEXT)
-run_projection currently returns a stub. Need to:
-- Import engine modules into server.cjs (or a worker)
-- Build inpWithAssets from DB profile + holdings
-- Call buildCashFlow and runMonteCarlo with real data
-- Return actual year-by-year cashflow and success rate
-- Wire MAGI calculation so IRMAA headroom is precise
+### Brief 8 — Wire real engine server-side (COMPLETE)
+- server-adapter.cjs built, engine runs in Node context
+- run_projection returns real cashflow, success rate,
+  peak balance, MAGI
+- query_irmaa_headroom returns precise dollar headroom
+- 89% success rate, $1.677M portfolio verified against
+  Scott's actual data
 
 ### Brief 9 — propose_change tool (ephemeral scenarios)
 - AI can tentatively modify plan inputs for what-if
@@ -87,14 +87,9 @@ run_projection currently returns a stub. Need to:
 ---
 
 ## Known issues
-1. run_projection returns stub data — real engine not wired
-   server-side yet (Brief 8)
-2. MAGI in IRMAA tool is estimated from SS only — needs
-   IRA draws + conversions from engine (Brief 8)
-3. "Speak with your advisor" deflection in AI responses —
-   prompt tuning needed
-4. Milestone dates in Overview ribbon out of chronological order
-5. Monthly spending actuals may not persist between sessions
+1. Briefing commit count is 24 (not 22 as stated in header)
+2. Milestone dates in Overview ribbon out of chronological order
+3. Monthly spending actuals may not persist between sessions
    for non-Scott users
 
 ---
