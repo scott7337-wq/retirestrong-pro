@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -11,6 +11,34 @@ export default function SpendingTab({ ctx }) {
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
   var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
+  var API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || '';
+
+  var saveActualsState = useState('idle');
+  var saveStatus = saveActualsState[0]; var setSaveStatus = saveActualsState[1];
+
+  function handleSaveActuals() {
+    if (!authUser) return;
+    setSaveStatus('saving');
+    var year = new Date().getFullYear();
+    var monthKeys = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    var saves = monthKeys.map(function(m) {
+      var amount = monthlySpend[m] || 0;
+      return fetch(API_BASE + '/api/spending_actuals/' + m, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: year, amount: amount, user_id: authUser.user_id }),
+      });
+    });
+    Promise.all(saves)
+      .then(function() {
+        setSaveStatus('saved');
+        setTimeout(function() { setSaveStatus('idle'); }, 2000);
+      })
+      .catch(function(err) {
+        console.error('save actuals failed:', err);
+        setSaveStatus('idle');
+      });
+  }
 
   // Compute totalPort from derivedTotals for withdrawal rate calcs
   var totalPort = Object.values(derivedTotals || {}).reduce(function(s, v) { return s + (v || 0); }, 0);
@@ -135,6 +163,21 @@ export default function SpendingTab({ ctx }) {
               </div>
             );
           })}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+          <button
+            onClick={handleSaveActuals}
+            disabled={saveStatus === 'saving'}
+            style={{
+              background: saveStatus === 'saved' ? '#3D6337' : '#0A4D54',
+              color: 'white', border: 'none', borderRadius: 7,
+              padding: '8px 16px', fontSize: 13, fontWeight: 600,
+              cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer',
+              opacity: saveStatus === 'saving' ? 0.7 : 1,
+            }}
+          >
+            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : 'Save actuals'}
+          </button>
         </div>
       </div>
 

@@ -943,6 +943,42 @@ export default function RetireStrongPlanner({ userId }) {
       .catch(function() { setDataSource('offline'); });
   }, []);
 
+  // ── Load expense sub-fields and spending actuals from DB ──────────────────
+  // expense_budget → inp.housingMonthly / foodMonthly / transportMonthly / travelMonthly / otherMonthly
+  // spending_actuals → monthlySpend { jan, feb, ... }
+  useEffect(function() {
+    if (!API_BASE || !authUser || !authUser.user_id) return;
+    var uid = encodeURIComponent(authUser.user_id);
+    var year = new Date().getFullYear();
+
+    fetch(API_BASE + '/api/expenses?user_id=' + uid)
+      .then(function(r) { return r.json(); })
+      .then(function(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) return;
+        var patch = {};
+        rows.forEach(function(r) {
+          var amt = parseFloat(r.monthly_amount) || 0;
+          if (r.category === 'housing')        patch.housingMonthly   = amt;
+          if (r.category === 'food')           patch.foodMonthly      = amt;
+          if (r.category === 'transportation') patch.transportMonthly = amt;
+          if (r.category === 'travel')         patch.travelMonthly    = amt;
+          if (r.category === 'other')          patch.otherMonthly     = amt;
+        });
+        if (Object.keys(patch).length > 0) {
+          setInp(function(prev) { return Object.assign({}, prev, patch); });
+        }
+      })
+      .catch(function(err) { console.warn('expenses load failed:', err); });
+
+    fetch(API_BASE + '/api/spending_actuals?user_id=' + uid + '&year=' + year)
+      .then(function(r) { return r.json(); })
+      .then(function(obj) {
+        if (obj && typeof obj === 'object' && !obj.error) {
+          setMonthlySpend(function(prev) { return Object.assign({}, prev, obj); });
+        }
+      })
+      .catch(function(err) { console.warn('spending actuals load failed:', err); });
+  }, [authUser ? authUser.user_id : null]);
 
   // ── Editable bucket config ───────────────────────────────────────────────────
   var bucketCfgState = useState(DEFAULT_BUCKET_CONFIG);
