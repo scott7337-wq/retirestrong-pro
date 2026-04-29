@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, TrendingUp, Activity, Layers, DollarSign, FileText, Receipt, Settings, Save, CheckCircle, Loader, AlertCircle } from 'lucide-react';
+import { Home, TrendingUp, Activity, Layers, DollarSign, FileText, Receipt, Settings, Save, CheckCircle, Loader, AlertCircle, MessageSquare } from 'lucide-react';
 import RetireStrongLogo from '../shared/RetireStrongLogo.jsx';
 
 var NAV_GROUPS = [
@@ -24,6 +24,12 @@ var NAV_GROUPS = [
     label: 'SETTINGS',
     items: [
       { id: 'settings',   label: 'Assumptions',  Icon: Settings },
+    ],
+  },
+  {
+    label: 'AI',
+    items: [
+      { id: 'coach',      label: 'Coach',        Icon: MessageSquare },
     ],
   },
 ];

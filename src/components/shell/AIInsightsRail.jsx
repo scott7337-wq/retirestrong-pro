@@ -15,7 +15,8 @@ const COLORS = {
   textMuted:    '#9CA3AF',
   amber:        '#D97706',
   amberLight:   '#FEF3C7',
-  red:          '#DC2626',
+  working:      '#8A5515',
+  workingBg:    '#FEF3C7',
 };
 
 // Chat fetch uses a relative URL — Vite dev server proxies /api → :3101.
@@ -133,25 +134,138 @@ function LoadingDots() {
   );
 }
 
+// ── Diff strip ──────────────────────────────────────────────────────────────
+function DiffStrip({ workingScenario, onDiscard, onPin }) {
+  if (!workingScenario) return null;
+  return (
+    <div style={{
+      flexShrink: 0,
+      padding: '7px 12px',
+      background: COLORS.workingBg,
+      borderBottom: '1px solid ' + COLORS.border,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      animation: 'rsSlideDown 240ms cubic-bezier(.2,.7,.3,1)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span style={{
+          width: 7, height: 7, borderRadius: '50%',
+          background: COLORS.working, flexShrink: 0,
+          display: 'inline-block',
+          animation: 'rsPulse 1.6s infinite',
+        }} />
+        <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.working, flexShrink: 0 }}>Working</span>
+        <span style={{
+          fontSize: 11, color: COLORS.textSecondary,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{workingScenario.description}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        <button onClick={onDiscard} style={{
+          fontSize: 11, padding: '3px 8px',
+          background: 'transparent', border: '1px solid ' + COLORS.border,
+          borderRadius: 4, cursor: 'pointer', color: COLORS.textSecondary,
+        }}>Discard</button>
+        <button onClick={onPin} style={{
+          fontSize: 11, padding: '3px 8px',
+          background: COLORS.tealDark, border: 'none',
+          borderRadius: 4, cursor: 'pointer', color: '#fff', fontWeight: 600,
+        }}>Pin</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Pin modal ───────────────────────────────────────────────────────────────
+function PinModal({ workingScenario, onConfirm, onCancel }) {
+  const [name, setName] = useState(workingScenario?.description || 'My scenario');
+  const [note, setNote] = useState('');
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(40,37,29,0.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 200,
+    }}>
+      <div style={{
+        background: COLORS.cardBg, borderRadius: 14, padding: 24,
+        width: 420, maxWidth: '90vw',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+      }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>Pin this scenario</h3>
+        <p style={{ margin: '0 0 18px', color: COLORS.textMuted, fontSize: 12 }}>
+          Give it a name to keep it for comparison.
+        </p>
+        <label style={{ display: 'block', marginBottom: 14, fontSize: 12, color: COLORS.textMuted }}>
+          <span style={{ display: 'block', marginBottom: 4 }}>Scenario name</span>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+            style={{
+              width: '100%', padding: '7px 10px',
+              border: '1px solid ' + COLORS.border, borderRadius: 6,
+              fontSize: 13, fontFamily: 'inherit', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </label>
+        <label style={{ display: 'block', marginBottom: 18, fontSize: 12, color: COLORS.textMuted }}>
+          <span style={{ display: 'block', marginBottom: 4 }}>Note (optional)</span>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Why you're keeping this scenario..."
+            rows={2}
+            style={{
+              width: '100%', padding: '7px 10px',
+              border: '1px solid ' + COLORS.border, borderRadius: 6,
+              fontSize: 12, fontFamily: 'inherit', outline: 'none',
+              resize: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </label>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onCancel} style={{
+            background: 'transparent', border: '1px solid ' + COLORS.border,
+            borderRadius: 6, padding: '7px 14px', fontSize: 12, cursor: 'pointer',
+          }}>Cancel</button>
+          <button
+            onClick={() => onConfirm(name, note)}
+            disabled={!name.trim()}
+            style={{
+              background: COLORS.tealDark, border: 'none',
+              borderRadius: 6, padding: '7px 14px',
+              fontSize: 12, fontWeight: 600, color: '#fff',
+              cursor: name.trim() ? 'pointer' : 'not-allowed',
+              opacity: name.trim() ? 1 : 0.5,
+            }}
+          >Pin scenario</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main rail component ─────────────────────────────────────────────────────
 // Props:
-//   activeTab              — current plan tab (string)
-//   workingScenario        — controlled from AppShell (null | object)
-//   onWorkingScenarioChange — callback to lift working scenario state up
-export default function AIInsightsRail({ activeTab = 'overview', workingScenario, onWorkingScenarioChange }) {
+//   activeTab — current plan tab (string), sent to server for context
+export default function AIInsightsRail({ activeTab = 'overview' }) {
   const authCtx = useAuth();
   const userId = authCtx?.user?.user_id || null;
 
-  const [messages, setMessages]         = useState([INITIAL_GREETING]);
-  const [inputText, setInputText]       = useState('');
-  const [sessionId, setSessionId]       = useState(null);
-  const [isLoading, setIsLoading]       = useState(false);
-  const [tokenWarning, setTokenWarning] = useState(false);
+  const [messages, setMessages]             = useState([INITIAL_GREETING]);
+  const [inputText, setInputText]           = useState('');
+  const [sessionId, setSessionId]           = useState(null);
+  const [isLoading, setIsLoading]           = useState(false);
+  const [tokenWarning, setTokenWarning]     = useState(false);
+  const [workingScenario, setWorkingScenario] = useState(null);
+  const [showPinModal, setShowPinModal]     = useState(false);
+  const [pinToast, setPinToast]             = useState(false);
 
   const scrollRef   = useRef(null);
   const textareaRef = useRef(null);
 
-  // Scroll the last AI message into view, not the chips at bottom
+  // Scroll the last AI message into view
   useEffect(() => {
     if (!scrollRef.current) return;
     const aiMessages = scrollRef.current.querySelectorAll('.rs-msg-ai');
@@ -168,6 +282,33 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 84) + 'px';
   }, [inputText]);
+
+  async function handleDiscard() {
+    if (!userId) return;
+    try {
+      await fetch('/api/scenarios/working?user_id=' + userId, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Discard failed:', e);
+    }
+    setWorkingScenario(null);
+  }
+
+  async function handlePin(name, note) {
+    if (!userId) return;
+    try {
+      await fetch('/api/scenarios/pin?user_id=' + userId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, note }),
+      });
+    } catch (e) {
+      console.error('Pin failed:', e);
+    }
+    setWorkingScenario(null);
+    setShowPinModal(false);
+    setPinToast(true);
+    setTimeout(() => setPinToast(false), 2500);
+  }
 
   const sendMessage = useCallback(async (text) => {
     const trimmed = (text || '').trim();
@@ -216,10 +357,7 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
       }]);
 
       if (data.sessionId) setSessionId(data.sessionId);
-      // Lift working scenario state up to AppShell
-      if (onWorkingScenarioChange) {
-        onWorkingScenarioChange(data.workingScenario || null);
-      }
+      setWorkingScenario(data.workingScenario || null);
       if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
         setTokenWarning(true);
       }
@@ -232,15 +370,15 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
     } finally {
       setIsLoading(false);
     }
-  }, [messages, sessionId, activeTab, userId, isLoading, onWorkingScenarioChange]);
+  }, [messages, sessionId, activeTab, userId, isLoading]);
 
   const startNewChat = useCallback(() => {
     setMessages([INITIAL_GREETING]);
     setSessionId(null);
     setTokenWarning(false);
     setInputText('');
-    if (onWorkingScenarioChange) onWorkingScenarioChange(null);
-  }, [onWorkingScenarioChange]);
+    setWorkingScenario(null);
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -251,7 +389,9 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
 
   return (
     <div style={{
-      width: '100%',
+      width: 300,
+      minWidth: 300,
+      flexShrink: 0,
       background: COLORS.bg,
       borderRight: '1px solid ' + COLORS.border,
       height: '100%',
@@ -267,14 +407,19 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
         borderBottom: '2px solid rgba(10,77,84,0.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.tealDark }}>✦ Ask RetireStrong</span>
-        </div>
+        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.tealDark }}>✦ Ask RetireStrong</span>
         <div title={isLoading ? 'Working…' : 'Ready'} style={{
           width: 7, height: 7, borderRadius: '50%',
           background: isLoading ? COLORS.amber : COLORS.tealMid,
         }} />
       </div>
+
+      {/* Working scenario strip */}
+      <DiffStrip
+        workingScenario={workingScenario}
+        onDiscard={handleDiscard}
+        onPin={() => setShowPinModal(true)}
+      />
 
       {/* Chat log */}
       <div ref={scrollRef} style={{
@@ -343,6 +488,30 @@ export default function AIInsightsRail({ activeTab = 'overview', workingScenario
           title="Send"
         ><Send size={13} /></button>
       </div>
+
+      {/* Pin modal */}
+      {showPinModal && (
+        <PinModal
+          workingScenario={workingScenario}
+          onConfirm={handlePin}
+          onCancel={() => setShowPinModal(false)}
+        />
+      )}
+
+      {/* Pin toast */}
+      {pinToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%',
+          transform: 'translateX(-50%)',
+          background: COLORS.tealDark, color: '#fff',
+          padding: '10px 20px', borderRadius: 8,
+          fontSize: 13, fontWeight: 500,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          zIndex: 300,
+        }}>
+          Scenario pinned ✓
+        </div>
+      )}
     </div>
   );
 }

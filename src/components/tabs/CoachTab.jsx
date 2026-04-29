@@ -1,0 +1,612 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
+
+const COLORS = {
+  bg:           '#F5F3EF',
+  border:       '#E8E4DC',
+  cardBg:       '#FFFFFF',
+  tealDark:     '#0A4D54',
+  tealMid:      '#4A9E8E',
+  tealLight:    '#E8F5F2',
+  textPrimary:  '#1A1A1A',
+  textSecondary:'#374151',
+  textMuted:    '#9CA3AF',
+  amber:        '#D97706',
+  amberLight:   '#FEF3C7',
+  working:      '#8A5515',
+  workingBg:    '#FEF3C7',
+  green:        '#3D6337',
+};
+
+const INITIAL_GREETING = {
+  role: 'assistant',
+  content: "Welcome to Coach. I'm here to help you think through your retirement plan in depth. What's on your mind?",
+  chips: [
+    "Walk me through my full plan",
+    "Am I on track to retire?",
+    "What levers do I have?",
+    "Biggest risks to my plan?",
+  ],
+  toolCalls: [],
+  isInitial: true,
+};
+
+const TOKEN_WARN_THRESHOLD = 20000;
+
+// ── Tool disclosure row ─────────────────────────────────────────────────────
+function ToolCallsRow({ toolCalls }) {
+  const [open, setOpen] = useState(false);
+  if (!toolCalls || toolCalls.length === 0) return null;
+  const names = toolCalls.map(t => t.name).join(' · ');
+  return (
+    <div style={{ marginTop: 6, fontSize: 11, color: COLORS.textMuted }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          fontSize: 11, color: COLORS.textMuted, fontFamily: 'inherit',
+        }}
+      >
+        {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+        <span>&lt;tool&gt; {names}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 4, paddingLeft: 12 }}>
+          {toolCalls.map((tc, i) => (
+            <div key={i} style={{ marginBottom: 4 }}>
+              <div style={{ fontWeight: 600, color: COLORS.textSecondary }}>{tc.name}</div>
+              <pre style={{
+                fontSize: 10, color: COLORS.textMuted, margin: '2px 0', padding: 4,
+                background: COLORS.bg, borderRadius: 3, overflow: 'auto', maxHeight: 120,
+                fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              }}>{JSON.stringify(tc.result, null, 2)}</pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Chat message ────────────────────────────────────────────────────────────
+function ChatMessage({ msg, onChipClick }) {
+  const isUser = msg.role === 'user';
+  return (
+    <div className={isUser ? undefined : 'rs-coach-msg-ai'} style={{
+      display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start',
+      marginBottom: 14,
+    }}>
+      <div style={{ maxWidth: '80%' }}>
+        <div style={{
+          background: isUser ? COLORS.tealDark : COLORS.cardBg,
+          color: isUser ? '#fff' : COLORS.textPrimary,
+          border: isUser ? 'none' : '1px solid ' + COLORS.border,
+          borderRadius: 10,
+          padding: '10px 14px',
+          fontSize: 14,
+          lineHeight: 1.6,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>{msg.content}</div>
+
+        {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && (
+          <ToolCallsRow toolCalls={msg.toolCalls} />
+        )}
+
+        {!isUser && msg.chips && msg.chips.length > 0 && (
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {msg.chips.map((chip, i) => (
+              <button
+                key={i}
+                onClick={() => onChipClick(chip)}
+                style={{
+                  fontSize: 12, padding: '5px 12px',
+                  background: COLORS.tealLight, color: COLORS.tealDark,
+                  border: '1px solid ' + COLORS.tealDark + '40',
+                  borderRadius: 999, cursor: 'pointer', lineHeight: 1.3,
+                }}
+              >{chip}</button>
+            ))}
+          </div>
+        )}
+
+        {!isUser && !msg.isInitial && (
+          <div style={{
+            marginTop: 6, fontSize: 11, fontStyle: 'italic',
+            color: COLORS.textMuted,
+          }}>This is education, not investment advice.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Working scenario strip ──────────────────────────────────────────────────
+function WorkingStrip({ workingScenario, onDiscard, onPin }) {
+  if (!workingScenario) return null;
+  return (
+    <div style={{
+      padding: '8px 20px',
+      background: COLORS.workingBg,
+      borderBottom: '1px solid ' + COLORS.border,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      flexShrink: 0,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: COLORS.working, display: 'inline-block',
+          animation: 'rsPulse 1.6s infinite',
+        }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.working }}>Working scenario</span>
+        <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{workingScenario.description}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onDiscard} style={{
+          fontSize: 12, padding: '4px 10px',
+          background: 'transparent', border: '1px solid ' + COLORS.border,
+          borderRadius: 4, cursor: 'pointer', color: COLORS.textMuted,
+        }}>Discard</button>
+        <button onClick={onPin} style={{
+          fontSize: 12, padding: '4px 10px',
+          background: COLORS.tealDark, border: 'none',
+          borderRadius: 4, cursor: 'pointer', color: '#fff', fontWeight: 600,
+        }}>Pin</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Pin modal ───────────────────────────────────────────────────────────────
+function PinModal({ workingScenario, onConfirm, onCancel }) {
+  const [name, setName] = useState(workingScenario?.description || 'My scenario');
+  const [note, setNote] = useState('');
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(40,37,29,0.4)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 200,
+    }}>
+      <div style={{
+        background: COLORS.cardBg, borderRadius: 14, padding: 24,
+        width: 440, maxWidth: '90vw',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+      }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>Pin this scenario</h3>
+        <p style={{ margin: '0 0 18px', color: COLORS.textMuted, fontSize: 12 }}>
+          Give it a name to keep it for comparison.
+        </p>
+        <label style={{ display: 'block', marginBottom: 14, fontSize: 12, color: COLORS.textMuted }}>
+          <span style={{ display: 'block', marginBottom: 4 }}>Scenario name</span>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+            style={{
+              width: '100%', padding: '7px 10px',
+              border: '1px solid ' + COLORS.border, borderRadius: 6,
+              fontSize: 13, fontFamily: 'inherit', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </label>
+        <label style={{ display: 'block', marginBottom: 18, fontSize: 12, color: COLORS.textMuted }}>
+          <span style={{ display: 'block', marginBottom: 4 }}>Note (optional)</span>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Why you're keeping this scenario..."
+            rows={2}
+            style={{
+              width: '100%', padding: '7px 10px',
+              border: '1px solid ' + COLORS.border, borderRadius: 6,
+              fontSize: 12, fontFamily: 'inherit', outline: 'none',
+              resize: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </label>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onCancel} style={{
+            background: 'transparent', border: '1px solid ' + COLORS.border,
+            borderRadius: 6, padding: '7px 14px', fontSize: 12, cursor: 'pointer',
+          }}>Cancel</button>
+          <button
+            onClick={() => onConfirm(name, note)}
+            disabled={!name.trim()}
+            style={{
+              background: COLORS.tealDark, border: 'none',
+              borderRadius: 6, padding: '7px 14px',
+              fontSize: 12, fontWeight: 600, color: '#fff',
+              cursor: name.trim() ? 'pointer' : 'not-allowed',
+              opacity: name.trim() ? 1 : 0.5,
+            }}
+          >Pin scenario</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Context panel (right pane) ──────────────────────────────────────────────
+function ContextPanel({ ctx }) {
+  if (!ctx) return null;
+  const { successRate, totalPort, inp, fmtC, fmtPct } = ctx;
+
+  const retireYear = inp?.retireYear || null;
+  const currentYear = new Date().getFullYear();
+  const yearsToRetire = retireYear ? Math.max(0, retireYear - currentYear) : null;
+  const monthlySpend = inp?.desiredSpending ? Math.round(inp.desiredSpending / 12) : null;
+
+  const scoreColor = successRate >= 80 ? COLORS.green
+    : successRate >= 60 ? COLORS.amber
+    : '#8B3528';
+
+  return (
+    <div style={{
+      padding: '28px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16,
+      overflowY: 'auto',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        Plan at a glance
+      </div>
+
+      {/* Success rate */}
+      <div style={{
+        background: COLORS.cardBg,
+        border: '1px solid ' + COLORS.border,
+        borderRadius: 12, padding: '18px 20px',
+      }}>
+        <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
+        <div style={{ fontSize: 40, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
+          {successRate != null ? successRate + '%' : '—'}
+        </div>
+        <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+          {successRate >= 80 ? 'Plan is on track' : successRate >= 60 ? 'Some adjustments may help' : 'Plan needs attention'}
+        </div>
+      </div>
+
+      {/* Key numbers */}
+      <div style={{
+        background: COLORS.cardBg,
+        border: '1px solid ' + COLORS.border,
+        borderRadius: 12, padding: '16px 20px',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}>
+        {totalPort != null && (
+          <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
+        )}
+        {monthlySpend != null && (
+          <KeyRow label="Monthly spending" value={fmtC ? fmtC(monthlySpend) : '$' + monthlySpend.toLocaleString()} />
+        )}
+        {retireYear && (
+          <KeyRow label="Target retirement" value={retireYear + (yearsToRetire > 0 ? ' (' + yearsToRetire + ' yrs)' : ' (this year)')} />
+        )}
+        {inp?.ssAge && (
+          <KeyRow label="SS claim age" value={inp.ssAge} />
+        )}
+      </div>
+
+      {/* Coach tips */}
+      <div style={{
+        background: COLORS.tealLight,
+        border: '1px solid ' + COLORS.tealDark + '30',
+        borderRadius: 12, padding: '16px 20px',
+      }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.tealDark, marginBottom: 8 }}>
+          Coach can help you
+        </div>
+        {[
+          'Model what-if scenarios',
+          'Optimize Roth conversions',
+          'Stress test your plan',
+          'Understand IRMAA brackets',
+          'Fine-tune retirement timing',
+        ].map((tip, i) => (
+          <div key={i} style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 5, paddingLeft: 12, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 0, color: COLORS.tealMid }}>·</span>
+            {tip}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KeyRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      <span style={{ fontSize: 12, color: COLORS.textMuted }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>{value}</span>
+    </div>
+  );
+}
+
+// ── Main CoachTab ───────────────────────────────────────────────────────────
+export default function CoachTab({ ctx }) {
+  const authCtx = useAuth();
+  const userId = authCtx?.user?.user_id || null;
+
+  const [messages, setMessages]               = useState([INITIAL_GREETING]);
+  const [inputText, setInputText]             = useState('');
+  const [sessionId, setSessionId]             = useState(null);
+  const [isLoading, setIsLoading]             = useState(false);
+  const [tokenWarning, setTokenWarning]       = useState(false);
+  const [workingScenario, setWorkingScenario] = useState(null);
+  const [showPinModal, setShowPinModal]       = useState(false);
+  const [pinToast, setPinToast]               = useState(false);
+
+  const scrollRef   = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Scroll to last AI message
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const aiMessages = scrollRef.current.querySelectorAll('.rs-coach-msg-ai');
+    if (aiMessages.length > 0) {
+      aiMessages[aiMessages.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [messages, isLoading]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  }, [inputText]);
+
+  async function handleDiscard() {
+    if (!userId) return;
+    try {
+      await fetch('/api/scenarios/working?user_id=' + userId, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Discard failed:', e);
+    }
+    setWorkingScenario(null);
+  }
+
+  async function handlePin(name, note) {
+    if (!userId) return;
+    try {
+      await fetch('/api/scenarios/pin?user_id=' + userId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, note }),
+      });
+    } catch (e) {
+      console.error('Pin failed:', e);
+    }
+    setWorkingScenario(null);
+    setShowPinModal(false);
+    setPinToast(true);
+    setTimeout(() => setPinToast(false), 2500);
+  }
+
+  const sendMessage = useCallback(async (text) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed || isLoading) return;
+    if (!userId) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'You need to be logged in to chat. Please sign in.',
+        chips: [], toolCalls: [],
+      }]);
+      return;
+    }
+
+    const historyForApi = [...messages, { role: 'user', content: trimmed }]
+      .filter(m => !m.isInitial)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    setMessages(prev => [...prev, { role: 'user', content: trimmed, chips: [], toolCalls: [] }]);
+    setInputText('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages:  historyForApi,
+          sessionId,
+          activeTab: 'coach',
+          user_id:   userId,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.reply || '(empty response)',
+        chips: data.chips || [],
+        toolCalls: data.toolCallsMade || [],
+      }]);
+
+      if (data.sessionId) setSessionId(data.sessionId);
+      setWorkingScenario(data.workingScenario || null);
+      if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
+        setTokenWarning(true);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry — something went wrong. ' + (err.message || ''),
+        chips: [], toolCalls: [],
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, sessionId, userId, isLoading]);
+
+  const startNewChat = useCallback(() => {
+    setMessages([INITIAL_GREETING]);
+    setSessionId(null);
+    setTokenWarning(false);
+    setInputText('');
+    setWorkingScenario(null);
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputText);
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      height: '100%',
+      overflow: 'hidden',
+      background: COLORS.bg,
+    }}>
+      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+
+      {/* ── Left pane: chat ── */}
+      <div style={{
+        flex: '0 0 60%',
+        maxWidth: '60%',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: '1px solid ' + COLORS.border,
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          flexShrink: 0,
+          padding: '18px 24px',
+          background: COLORS.cardBg,
+          borderBottom: '1px solid ' + COLORS.border,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.tealDark }}>
+              ✦ RetireStrong Coach
+            </div>
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
+              Deep-dive planning session
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {tokenWarning && (
+              <button onClick={startNewChat} style={{
+                fontSize: 12, padding: '5px 12px',
+                background: COLORS.amberLight, color: '#78350F',
+                border: '1px solid ' + COLORS.amber,
+                borderRadius: 6, cursor: 'pointer',
+              }}>New chat</button>
+            )}
+            <div title={isLoading ? 'Working…' : 'Ready'} style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: isLoading ? COLORS.amber : COLORS.tealMid,
+            }} />
+          </div>
+        </div>
+
+        {/* Working scenario strip */}
+        <WorkingStrip
+          workingScenario={workingScenario}
+          onDiscard={handleDiscard}
+          onPin={() => setShowPinModal(true)}
+        />
+
+        {/* Messages */}
+        <div ref={scrollRef} style={{
+          flex: 1, overflowY: 'auto', padding: '20px 24px',
+        }}>
+          {messages.map((m, i) => (
+            <ChatMessage key={i} msg={m} onChipClick={sendMessage} />
+          ))}
+          {isLoading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: COLORS.textMuted, fontSize: 13 }}>
+              <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Thinking…</span>
+            </div>
+          )}
+        </div>
+
+        {/* Composer */}
+        <div style={{
+          flexShrink: 0,
+          padding: '16px 24px',
+          background: COLORS.cardBg,
+          borderTop: '1px solid ' + COLORS.border,
+          display: 'flex', gap: 8, alignItems: 'flex-end',
+        }}>
+          <textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={isLoading ? 'Working…' : 'Ask anything about your plan…'}
+            disabled={isLoading}
+            rows={1}
+            style={{
+              flex: 1, fontSize: 14, fontFamily: 'inherit',
+              border: '1px solid ' + COLORS.border, borderRadius: 8,
+              padding: '10px 12px', resize: 'none', outline: 'none',
+              background: isLoading ? COLORS.bg : COLORS.cardBg,
+              color: COLORS.textPrimary,
+              minHeight: 40, maxHeight: 120,
+              lineHeight: 1.5, boxSizing: 'border-box',
+            }}
+          />
+          <button
+            onClick={() => sendMessage(inputText)}
+            disabled={isLoading || !inputText.trim()}
+            style={{
+              flexShrink: 0,
+              background: (isLoading || !inputText.trim()) ? COLORS.border : COLORS.tealDark,
+              color: '#fff', border: 'none', borderRadius: 8,
+              padding: '10px 14px', cursor: (isLoading || !inputText.trim()) ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            title="Send"
+          ><Send size={15} /></button>
+        </div>
+      </div>
+
+      {/* ── Right pane: plan context ── */}
+      <div style={{
+        flex: '0 0 40%',
+        maxWidth: '40%',
+        background: COLORS.bg,
+        overflowY: 'auto',
+      }}>
+        <ContextPanel ctx={ctx} />
+      </div>
+
+      {/* Pin modal */}
+      {showPinModal && (
+        <PinModal
+          workingScenario={workingScenario}
+          onConfirm={handlePin}
+          onCancel={() => setShowPinModal(false)}
+        />
+      )}
+
+      {/* Pin toast */}
+      {pinToast && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%',
+          transform: 'translateX(-50%)',
+          background: COLORS.tealDark, color: '#fff',
+          padding: '10px 20px', borderRadius: 8,
+          fontSize: 13, fontWeight: 500,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          zIndex: 300,
+        }}>
+          Scenario pinned ✓
+        </div>
+      )}
+    </div>
+  );
+}

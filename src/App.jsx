@@ -21,6 +21,7 @@ import RothConversionsTab from './components/tabs/RothConversions.jsx';
 import SCENARIO_PRESETS from './data/scenarioPresets.js';
 import PortfolioPage from './components/tabs/PortfolioPage.jsx';
 import SpendingTab from './components/tabs/SpendingTab.jsx';
+import CoachTab from './components/tabs/CoachTab.jsx';
 import AppShell from './components/shell/AppShell.jsx';
 import Sidebar from './components/shell/Sidebar.jsx';
 import OverviewPage from './components/overview/OverviewPage.jsx';
@@ -1992,7 +1993,9 @@ export default function RetireStrongPlanner({ userId }) {
         </div>
       )}
 
-      {activeTab === 'dashboard'
+      {activeTab === 'coach'
+        ? <CoachTab ctx={tabCtx} />
+        : activeTab === 'dashboard'
         ? <OverviewPage {...overviewProps} />
         : <div style={{background:SURFACE,borderRadius:16,padding:28,border:'1px solid '+BORDER,boxShadow:SHADOW,margin:'0 0 0 0'}}>
 
