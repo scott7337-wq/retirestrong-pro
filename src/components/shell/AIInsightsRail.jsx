@@ -276,6 +276,45 @@ function InsightCard({ title, items, action, onAction, priority }) {
   );
 }
 
+// ── Tab-specific starter chips ───────────────────────────────────────────────
+const TAB_CHIPS = {
+  dashboard: [
+    'How healthy is my plan?',
+    'What is my IRMAA headroom?',
+    'Am I on track to retire?',
+  ],
+  buckets: [
+    'How much cash should I hold?',
+    'When should I refill Bucket 1?',
+    'How does sequence risk affect me?',
+  ],
+  cashflow: [
+    'When do income gaps start?',
+    'What is my optimal Roth conversion?',
+    'How does SS timing affect my cash flow?',
+  ],
+  monte: [
+    'What stress tests matter most?',
+    'What if I add guardrails?',
+    'What levers improve my success rate?',
+  ],
+  incometax: [
+    'What is my IRMAA headroom?',
+    'How much should I convert to Roth?',
+    'Explain the two-year IRMAA lookback',
+  ],
+  roth: [
+    'How much should I convert this year?',
+    'Should I pay conversion taxes from IRA or taxable?',
+    'What is the survivor tax cliff?',
+  ],
+  settings: [
+    'Which assumption matters most?',
+    'What if inflation is 4%?',
+    'How sensitive is my plan to spending?',
+  ],
+};
+
 // ── Data-driven rail content per tab ────────────────────────────────────────
 function buildRailContent(activeTab, ctx, sendMessage) {
   const cf = ctx?.cashFlow || [];
@@ -588,6 +627,28 @@ export default function AIInsightsRail({ activeTab = 'overview', ctx }) {
               priority={card.priority}
             />
           ))}
+          {(TAB_CHIPS[activeTab] || []).length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                Quick questions
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {(TAB_CHIPS[activeTab] || []).map((chip, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(chip)}
+                    style={{
+                      fontSize: 11.5, padding: '5px 9px',
+                      background: COLORS.cardBg, color: COLORS.tealDark,
+                      border: '1px solid ' + COLORS.tealDark + '50',
+                      borderRadius: 999, cursor: 'pointer', textAlign: 'left',
+                      lineHeight: 1.3,
+                    }}
+                  >{chip}</button>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{
             padding: '10px 12px', background: '#F2F1EC', borderRadius: 8,
             fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5,

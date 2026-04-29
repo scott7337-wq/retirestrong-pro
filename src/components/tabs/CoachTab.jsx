@@ -545,12 +545,15 @@ export default function CoachTab({ ctx }) {
 
   async function handlePin(name, note) {
     if (!authUser?.user_id) return;
+    console.log('[handlePin] starting — user_id:', authUser.user_id, 'name:', name, 'working:', workingScenario?.scenario_id);
     try {
-      await fetch('/api/scenarios/pin?user_id=' + authUser.user_id, {
+      const res = await fetch('/api/scenarios/pin?user_id=' + authUser.user_id, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, note }),
       });
+      const data = await res.json().catch(() => ({}));
+      console.log('[handlePin] response status:', res.status, 'body:', data);
     } catch (e) {
       console.error('Pin failed:', e);
     }

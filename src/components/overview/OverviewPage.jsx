@@ -47,7 +47,7 @@ export default function OverviewPage({
   // Roth alert
   var rw = rothWindow || {};
   var showRothAlert = rw.years > 0 && (rw.totalRecommended || 0) > 0;
-  var rothYear = 2027;
+  var rothYear = new Date().getFullYear();
   var rothMonthsLeft = Math.max(0, 12 - 4); // April → Dec
   var rothHeadroom = rw.yearByYear && rw.yearByYear[0] ? rw.yearByYear[0].recommended : (rw.conservative || 0);
   var rothRate = rw.yearByYear && rw.yearByYear[0] ? rw.yearByYear[0].taxRate : '12%';

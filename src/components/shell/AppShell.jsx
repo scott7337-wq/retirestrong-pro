@@ -35,6 +35,7 @@ export default function AppShell({ sidebar, activeTab, ctx, children }) {
         overflow: activeTab === 'coach' ? 'hidden' : undefined,
         background: 'var(--rs-bg-page)',
         minWidth: 0,
+        minHeight: 0,
         display: activeTab === 'coach' ? 'flex' : 'block',
         flexDirection: activeTab === 'coach' ? 'column' : undefined,
       }}>
