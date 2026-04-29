@@ -830,6 +830,22 @@ app.post('/api/scenarios/pin', async (req, res) => {
   }
 });
 
+app.get('/api/scenarios', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT scenario_id, name, description,
+              applied_levers, is_working, created_at
+       FROM scenarios
+       WHERE user_id = $1 AND is_active = true
+       ORDER BY created_at DESC`,
+      [req.userId]
+    );
+    res.json({ scenarios: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
   try {

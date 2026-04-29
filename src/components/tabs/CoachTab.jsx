@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useChatSession } from '../../hooks/useChatSession.js';
 
 const COLORS = {
   bg:           '#F5F3EF',
@@ -18,21 +20,6 @@ const COLORS = {
   workingBg:    '#FEF3C7',
   green:        '#3D6337',
 };
-
-const INITIAL_GREETING = {
-  role: 'assistant',
-  content: "Welcome to Coach. I'm here to help you think through your retirement plan in depth. What's on your mind?",
-  chips: [
-    "Walk me through my full plan",
-    "Am I on track to retire?",
-    "What levers do I have?",
-    "Biggest risks to my plan?",
-  ],
-  toolCalls: [],
-  isInitial: true,
-};
-
-const TOKEN_WARN_THRESHOLD = 20000;
 
 // ── Tool disclosure row ─────────────────────────────────────────────────────
 function ToolCallsRow({ toolCalls }) {
@@ -74,7 +61,7 @@ function ToolCallsRow({ toolCalls }) {
 function ChatMessage({ msg, onChipClick }) {
   const isUser = msg.role === 'user';
   return (
-    <div className={isUser ? undefined : 'rs-coach-msg-ai'} style={{
+    <div data-role={isUser ? 'user' : 'assistant'} style={{
       display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start',
       marginBottom: 14,
     }}>
@@ -112,7 +99,7 @@ function ChatMessage({ msg, onChipClick }) {
           </div>
         )}
 
-        {!isUser && !msg.isInitial && (
+        {!isUser && !msg.isGreeting && (
           <div style={{
             marginTop: 6, fontSize: 11, fontStyle: 'italic',
             color: COLORS.textMuted,
@@ -230,10 +217,101 @@ function PinModal({ workingScenario, onConfirm, onCancel }) {
   );
 }
 
+// ── Scenario tab bar ────────────────────────────────────────────────────────
+function ScenarioTabBar({ activeScenarioId, onSelect, workingScenario, namedScenarios }) {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 6,
+      padding: '12px 16px',
+      borderBottom: '1px solid ' + COLORS.border,
+      flexWrap: 'wrap',
+      flexShrink: 0,
+      background: COLORS.cardBg,
+    }}>
+      {/* Base plan */}
+      <button
+        onClick={() => onSelect('base')}
+        style={{
+          background: activeScenarioId === 'base' ? '#E6F0F1' : COLORS.cardBg,
+          border: '1px solid',
+          borderColor: activeScenarioId === 'base' ? COLORS.tealDark : COLORS.border,
+          borderRadius: 6,
+          padding: '6px 14px',
+          fontSize: 13,
+          fontWeight: activeScenarioId === 'base' ? 600 : 400,
+          color: activeScenarioId === 'base' ? COLORS.tealDark : COLORS.textMuted,
+          cursor: 'pointer',
+        }}
+      >Base plan</button>
+
+      {/* Working scenario */}
+      {workingScenario && (
+        <button
+          onClick={() => onSelect('working')}
+          style={{
+            background: activeScenarioId === 'working' ? COLORS.workingBg : COLORS.cardBg,
+            border: '1px dashed',
+            borderColor: COLORS.working,
+            borderRadius: 6,
+            padding: '6px 14px',
+            fontSize: 13,
+            fontWeight: 600,
+            color: COLORS.working,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: COLORS.working, display: 'inline-block',
+          }} />
+          {workingScenario.description}
+        </button>
+      )}
+
+      {/* Named scenarios */}
+      {namedScenarios.map(s => (
+        <button
+          key={s.scenario_id}
+          onClick={() => onSelect(s.scenario_id)}
+          style={{
+            background: activeScenarioId === s.scenario_id ? '#E6F0F1' : COLORS.cardBg,
+            border: '1px solid',
+            borderColor: activeScenarioId === s.scenario_id ? COLORS.tealDark : COLORS.border,
+            borderRadius: 6,
+            padding: '6px 14px',
+            fontSize: 13,
+            fontWeight: activeScenarioId === s.scenario_id ? 600 : 400,
+            color: activeScenarioId === s.scenario_id ? COLORS.tealDark : COLORS.textMuted,
+            cursor: 'pointer',
+          }}
+        >{s.name}</button>
+      ))}
+
+      {/* Compare button */}
+      {namedScenarios.length >= 1 && (
+        <button style={{
+          background: 'transparent',
+          border: '1px dashed ' + COLORS.border,
+          borderRadius: 6,
+          padding: '6px 14px',
+          fontSize: 12,
+          color: COLORS.textMuted,
+          cursor: 'pointer',
+          marginLeft: 'auto',
+        }}>Compare →</button>
+      )}
+    </div>
+  );
+}
+
 // ── Context panel (right pane) ──────────────────────────────────────────────
-function ContextPanel({ ctx }) {
+function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, onSelectScenario }) {
   if (!ctx) return null;
-  const { successRate, totalPort, inp, fmtC, fmtPct } = ctx;
+  const { successRate, totalPort, inp, fmtC, cashFlow } = ctx;
 
   const retireYear = inp?.retireYear || null;
   const currentYear = new Date().getFullYear();
@@ -244,75 +322,117 @@ function ContextPanel({ ctx }) {
     : successRate >= 60 ? COLORS.amber
     : '#8B3528';
 
+  const chartData = cashFlow
+    ? cashFlow.map(r => ({ age: r.age, balance: Math.round(r.balance / 1000) }))
+    : [];
+
   return (
-    <div style={{
-      padding: '28px 24px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 16,
-      overflowY: 'auto',
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-        Plan at a glance
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Scenario tabs */}
+      <ScenarioTabBar
+        activeScenarioId={activeScenarioId}
+        onSelect={onSelectScenario}
+        workingScenario={workingScenario}
+        namedScenarios={namedScenarios}
+      />
 
-      {/* Success rate */}
+      {/* Scrollable content */}
       <div style={{
-        background: COLORS.cardBg,
-        border: '1px solid ' + COLORS.border,
-        borderRadius: 12, padding: '18px 20px',
+        flex: 1, overflowY: 'auto',
+        padding: '20px 20px',
+        display: 'flex', flexDirection: 'column', gap: 14,
       }}>
-        <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
-        <div style={{ fontSize: 40, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
-          {successRate != null ? successRate + '%' : '—'}
+        <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Plan at a glance
         </div>
-        <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
-          {successRate >= 80 ? 'Plan is on track' : successRate >= 60 ? 'Some adjustments may help' : 'Plan needs attention'}
-        </div>
-      </div>
 
-      {/* Key numbers */}
-      <div style={{
-        background: COLORS.cardBg,
-        border: '1px solid ' + COLORS.border,
-        borderRadius: 12, padding: '16px 20px',
-        display: 'flex', flexDirection: 'column', gap: 12,
-      }}>
-        {totalPort != null && (
-          <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
-        )}
-        {monthlySpend != null && (
-          <KeyRow label="Monthly spending" value={fmtC ? fmtC(monthlySpend) : '$' + monthlySpend.toLocaleString()} />
-        )}
-        {retireYear && (
-          <KeyRow label="Target retirement" value={retireYear + (yearsToRetire > 0 ? ' (' + yearsToRetire + ' yrs)' : ' (this year)')} />
-        )}
-        {inp?.ssAge && (
-          <KeyRow label="SS claim age" value={inp.ssAge} />
-        )}
-      </div>
-
-      {/* Coach tips */}
-      <div style={{
-        background: COLORS.tealLight,
-        border: '1px solid ' + COLORS.tealDark + '30',
-        borderRadius: 12, padding: '16px 20px',
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.tealDark, marginBottom: 8 }}>
-          Coach can help you
-        </div>
-        {[
-          'Model what-if scenarios',
-          'Optimize Roth conversions',
-          'Stress test your plan',
-          'Understand IRMAA brackets',
-          'Fine-tune retirement timing',
-        ].map((tip, i) => (
-          <div key={i} style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 5, paddingLeft: 12, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: COLORS.tealMid }}>·</span>
-            {tip}
+        {/* Success rate */}
+        <div style={{
+          background: COLORS.cardBg,
+          border: '1px solid ' + COLORS.border,
+          borderRadius: 12, padding: '16px 18px',
+        }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
+          <div style={{ fontSize: 38, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
+            {successRate != null ? successRate + '%' : '—'}
           </div>
-        ))}
+          <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+            {successRate >= 80 ? 'Plan is on track' : successRate >= 60 ? 'Some adjustments may help' : 'Plan needs attention'}
+          </div>
+        </div>
+
+        {/* Key numbers */}
+        <div style={{
+          background: COLORS.cardBg,
+          border: '1px solid ' + COLORS.border,
+          borderRadius: 12, padding: '14px 18px',
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          {totalPort != null && (
+            <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
+          )}
+          {monthlySpend != null && (
+            <KeyRow label="Monthly spending" value={fmtC ? fmtC(monthlySpend) : '$' + monthlySpend.toLocaleString()} />
+          )}
+          {retireYear && (
+            <KeyRow label="Target retirement" value={retireYear + (yearsToRetire > 0 ? ' (' + yearsToRetire + ' yrs)' : ' (this year)')} />
+          )}
+          {inp?.ssAge && (
+            <KeyRow label="SS claim age" value={inp.ssAge} />
+          )}
+        </div>
+
+        {/* Portfolio trajectory chart */}
+        {chartData.length > 0 && (
+          <div style={{
+            background: COLORS.cardBg,
+            border: '1px solid ' + COLORS.border,
+            borderRadius: 12, padding: '14px 16px',
+          }}>
+            <div style={{
+              fontSize: 11, fontWeight: 600, color: COLORS.textMuted,
+              marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em',
+            }}>Portfolio trajectory</div>
+            <ResponsiveContainer width="100%" height={140}>
+              <LineChart
+                data={chartData}
+                margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+              >
+                <XAxis
+                  dataKey="age"
+                  tick={{ fontSize: 10, fill: '#6B7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={4}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#6B7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={v => '$' + v + 'k'}
+                  width={45}
+                />
+                <Tooltip
+                  formatter={v => ['$' + v + 'k', 'Balance']}
+                  labelFormatter={l => 'Age ' + l}
+                  contentStyle={{
+                    fontSize: 12,
+                    border: '1px solid ' + COLORS.border,
+                    borderRadius: 6,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="balance"
+                  stroke={COLORS.tealDark}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -329,29 +449,32 @@ function KeyRow({ label, value }) {
 
 // ── Main CoachTab ───────────────────────────────────────────────────────────
 export default function CoachTab({ ctx }) {
-  const authCtx = useAuth();
-  const userId = authCtx?.user?.user_id || null;
+  const { user: authUser } = useAuth();
 
-  const [messages, setMessages]               = useState([INITIAL_GREETING]);
-  const [inputText, setInputText]             = useState('');
-  const [sessionId, setSessionId]             = useState(null);
-  const [isLoading, setIsLoading]             = useState(false);
-  const [tokenWarning, setTokenWarning]       = useState(false);
-  const [workingScenario, setWorkingScenario] = useState(null);
-  const [showPinModal, setShowPinModal]       = useState(false);
-  const [pinToast, setPinToast]               = useState(false);
+  const {
+    messages, inputText, setInputText, isLoading,
+    workingScenario, setWorkingScenario, tokenWarning,
+    chatLogRef, sendMessage, clearSession,
+  } = useChatSession({ activeTab: 'coach', userId: authUser?.user_id });
 
-  const scrollRef   = useRef(null);
   const textareaRef = useRef(null);
+  const [showPinModal, setShowPinModal]     = useState(false);
+  const [pinToast, setPinToast]             = useState(false);
+  const [namedScenarios, setNamedScenarios] = useState([]);
+  const [activeScenarioId, setActiveScenarioId] = useState('base');
 
-  // Scroll to last AI message
+  // Load named scenarios from DB
   useEffect(() => {
-    if (!scrollRef.current) return;
-    const aiMessages = scrollRef.current.querySelectorAll('.rs-coach-msg-ai');
-    if (aiMessages.length > 0) {
-      aiMessages[aiMessages.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [messages, isLoading]);
+    if (!authUser?.user_id) return;
+    fetch('/api/scenarios?user_id=' + authUser.user_id)
+      .then(r => r.json())
+      .then(data => {
+        if (data.scenarios) {
+          setNamedScenarios(data.scenarios.filter(s => !s.is_working));
+        }
+      })
+      .catch(() => {});
+  }, [authUser?.user_id, workingScenario]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -362,9 +485,9 @@ export default function CoachTab({ ctx }) {
   }, [inputText]);
 
   async function handleDiscard() {
-    if (!userId) return;
+    if (!authUser?.user_id) return;
     try {
-      await fetch('/api/scenarios/working?user_id=' + userId, { method: 'DELETE' });
+      await fetch('/api/scenarios/working?user_id=' + authUser.user_id, { method: 'DELETE' });
     } catch (e) {
       console.error('Discard failed:', e);
     }
@@ -372,9 +495,9 @@ export default function CoachTab({ ctx }) {
   }
 
   async function handlePin(name, note) {
-    if (!userId) return;
+    if (!authUser?.user_id) return;
     try {
-      await fetch('/api/scenarios/pin?user_id=' + userId, {
+      await fetch('/api/scenarios/pin?user_id=' + authUser.user_id, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, note }),
@@ -388,76 +511,11 @@ export default function CoachTab({ ctx }) {
     setTimeout(() => setPinToast(false), 2500);
   }
 
-  const sendMessage = useCallback(async (text) => {
-    const trimmed = (text || '').trim();
-    if (!trimmed || isLoading) return;
-    if (!userId) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'You need to be logged in to chat. Please sign in.',
-        chips: [], toolCalls: [],
-      }]);
-      return;
-    }
-
-    const historyForApi = [...messages, { role: 'user', content: trimmed }]
-      .filter(m => !m.isInitial)
-      .map(m => ({ role: m.role, content: m.content }));
-
-    setMessages(prev => [...prev, { role: 'user', content: trimmed, chips: [], toolCalls: [] }]);
-    setInputText('');
-    setIsLoading(true);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages:  historyForApi,
-          sessionId,
-          activeTab: 'coach',
-          user_id:   userId,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: data.reply || '(empty response)',
-        chips: data.chips || [],
-        toolCalls: data.toolCallsMade || [],
-      }]);
-
-      if (data.sessionId) setSessionId(data.sessionId);
-      setWorkingScenario(data.workingScenario || null);
-      if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
-        setTokenWarning(true);
-      }
-    } catch (err) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Sorry — something went wrong. ' + (err.message || ''),
-        chips: [], toolCalls: [],
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, sessionId, userId, isLoading]);
-
-  const startNewChat = useCallback(() => {
-    setMessages([INITIAL_GREETING]);
-    setSessionId(null);
-    setTokenWarning(false);
-    setInputText('');
-    setWorkingScenario(null);
-  }, []);
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage(inputText);
+      setInputText('');
     }
   };
 
@@ -497,7 +555,7 @@ export default function CoachTab({ ctx }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {tokenWarning && (
-              <button onClick={startNewChat} style={{
+              <button onClick={clearSession} style={{
                 fontSize: 12, padding: '5px 12px',
                 background: COLORS.amberLight, color: '#78350F',
                 border: '1px solid ' + COLORS.amber,
@@ -519,11 +577,11 @@ export default function CoachTab({ ctx }) {
         />
 
         {/* Messages */}
-        <div ref={scrollRef} style={{
+        <div ref={chatLogRef} style={{
           flex: 1, overflowY: 'auto', padding: '20px 24px',
         }}>
           {messages.map((m, i) => (
-            <ChatMessage key={i} msg={m} onChipClick={sendMessage} />
+            <ChatMessage key={i} msg={m} onChipClick={text => { sendMessage(text); }} />
           ))}
           {isLoading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: COLORS.textMuted, fontSize: 13 }}>
@@ -560,7 +618,7 @@ export default function CoachTab({ ctx }) {
             }}
           />
           <button
-            onClick={() => sendMessage(inputText)}
+            onClick={() => { sendMessage(inputText); setInputText(''); }}
             disabled={isLoading || !inputText.trim()}
             style={{
               flexShrink: 0,
@@ -579,9 +637,17 @@ export default function CoachTab({ ctx }) {
         flex: '0 0 40%',
         maxWidth: '40%',
         background: COLORS.bg,
-        overflowY: 'auto',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        <ContextPanel ctx={ctx} />
+        <ContextPanel
+          ctx={ctx}
+          activeScenarioId={activeScenarioId}
+          workingScenario={workingScenario}
+          namedScenarios={namedScenarios}
+          onSelectScenario={setActiveScenarioId}
+        />
       </div>
 
       {/* Pin modal */}

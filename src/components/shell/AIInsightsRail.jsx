@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useChatSession } from '../../hooks/useChatSession.js';
 
 // Token values (matching tokens.css). Hardcoded to keep the rail self-contained.
 const COLORS = {
@@ -18,23 +19,6 @@ const COLORS = {
   working:      '#8A5515',
   workingBg:    '#FEF3C7',
 };
-
-// Chat fetch uses a relative URL — Vite dev server proxies /api → :3101.
-
-// Initial greeting — static, no API call.
-const INITIAL_GREETING = {
-  role: 'assistant',
-  content: 'Your plan is loaded. What do you want to think through today?',
-  chips: [
-    "How's my plan looking?",
-    'Roth conversion this year?',
-    'What if I retire later?',
-  ],
-  toolCalls: [],
-  isInitial: true,
-};
-
-const TOKEN_WARN_THRESHOLD = 20000;
 
 // ── Tool-call disclosure row ────────────────────────────────────────────────
 function ToolCallsRow({ toolCalls }) {
@@ -76,7 +60,7 @@ function ToolCallsRow({ toolCalls }) {
 function ChatMessage({ msg, onChipClick }) {
   const isUser = msg.role === 'user';
   return (
-    <div className={isUser ? undefined : 'rs-msg-ai'} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
+    <div data-role={isUser ? 'user' : 'assistant'} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
       <div style={{ maxWidth: '95%' }}>
         <div style={{
           background: isUser ? COLORS.tealDark : COLORS.cardBg,
@@ -113,7 +97,7 @@ function ChatMessage({ msg, onChipClick }) {
           </div>
         )}
 
-        {!isUser && !msg.isInitial && (
+        {!isUser && !msg.isGreeting && (
           <div style={{
             marginTop: 6, fontSize: 10, fontStyle: 'italic',
             color: COLORS.textMuted, lineHeight: 1.4,
@@ -144,13 +128,11 @@ function DiffStrip({ workingScenario, onDiscard, onPin }) {
       background: COLORS.workingBg,
       borderBottom: '1px solid ' + COLORS.border,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      animation: 'rsSlideDown 240ms cubic-bezier(.2,.7,.3,1)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         <span style={{
           width: 7, height: 7, borderRadius: '50%',
-          background: COLORS.working, flexShrink: 0,
-          display: 'inline-block',
+          background: COLORS.working, flexShrink: 0, display: 'inline-block',
           animation: 'rsPulse 1.6s infinite',
         }} />
         <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.working, flexShrink: 0 }}>Working</span>
@@ -250,30 +232,17 @@ function PinModal({ workingScenario, onConfirm, onCancel }) {
 // Props:
 //   activeTab — current plan tab (string), sent to server for context
 export default function AIInsightsRail({ activeTab = 'overview' }) {
-  const authCtx = useAuth();
-  const userId = authCtx?.user?.user_id || null;
+  const { user: authUser } = useAuth();
 
-  const [messages, setMessages]             = useState([INITIAL_GREETING]);
-  const [inputText, setInputText]           = useState('');
-  const [sessionId, setSessionId]           = useState(null);
-  const [isLoading, setIsLoading]           = useState(false);
-  const [tokenWarning, setTokenWarning]     = useState(false);
-  const [workingScenario, setWorkingScenario] = useState(null);
-  const [showPinModal, setShowPinModal]     = useState(false);
-  const [pinToast, setPinToast]             = useState(false);
+  const {
+    messages, inputText, setInputText, isLoading,
+    workingScenario, setWorkingScenario, tokenWarning,
+    chatLogRef, sendMessage, clearSession,
+  } = useChatSession({ activeTab, userId: authUser?.user_id });
 
-  const scrollRef   = useRef(null);
   const textareaRef = useRef(null);
-
-  // Scroll the last AI message into view
-  useEffect(() => {
-    if (!scrollRef.current) return;
-    const aiMessages = scrollRef.current.querySelectorAll('.rs-msg-ai');
-    if (aiMessages.length > 0) {
-      const lastAiMsg = aiMessages[aiMessages.length - 1];
-      lastAiMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [messages, isLoading]);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinToast, setPinToast]         = useState(false);
 
   // Auto-resize textarea (1-3 lines)
   useEffect(() => {
@@ -284,9 +253,9 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
   }, [inputText]);
 
   async function handleDiscard() {
-    if (!userId) return;
+    if (!authUser?.user_id) return;
     try {
-      await fetch('/api/scenarios/working?user_id=' + userId, { method: 'DELETE' });
+      await fetch('/api/scenarios/working?user_id=' + authUser.user_id, { method: 'DELETE' });
     } catch (e) {
       console.error('Discard failed:', e);
     }
@@ -294,9 +263,9 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
   }
 
   async function handlePin(name, note) {
-    if (!userId) return;
+    if (!authUser?.user_id) return;
     try {
-      await fetch('/api/scenarios/pin?user_id=' + userId, {
+      await fetch('/api/scenarios/pin?user_id=' + authUser.user_id, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, note }),
@@ -310,80 +279,11 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
     setTimeout(() => setPinToast(false), 2500);
   }
 
-  const sendMessage = useCallback(async (text) => {
-    const trimmed = (text || '').trim();
-    if (!trimmed || isLoading) return;
-    if (!userId) {
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: 'You need to be logged in to chat. Please sign in.',
-        chips: [], toolCalls: [],
-      }]);
-      return;
-    }
-
-    const historyForApi = [...messages, { role: 'user', content: trimmed }]
-      .filter((m) => !m.isInitial)
-      .map((m) => ({ role: m.role, content: m.content }));
-
-    setMessages((prev) => [...prev, {
-      role: 'user', content: trimmed, chips: [], toolCalls: [],
-    }]);
-    setInputText('');
-    setIsLoading(true);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages:  historyForApi,
-          sessionId,
-          activeTab,
-          user_id:   userId,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || ('HTTP ' + res.status));
-      }
-
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: data.reply || '(empty response)',
-        chips: data.chips || [],
-        toolCalls: data.toolCallsMade || [],
-      }]);
-
-      if (data.sessionId) setSessionId(data.sessionId);
-      setWorkingScenario(data.workingScenario || null);
-      if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
-        setTokenWarning(true);
-      }
-    } catch (err) {
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: 'Sorry — something went wrong. ' + (err.message || ''),
-        chips: [], toolCalls: [],
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, sessionId, activeTab, userId, isLoading]);
-
-  const startNewChat = useCallback(() => {
-    setMessages([INITIAL_GREETING]);
-    setSessionId(null);
-    setTokenWarning(false);
-    setInputText('');
-    setWorkingScenario(null);
-  }, []);
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage(inputText);
+      setInputText('');
     }
   };
 
@@ -393,7 +293,7 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
       minWidth: 300,
       flexShrink: 0,
       background: COLORS.bg,
-      borderRight: '1px solid ' + COLORS.border,
+      borderLeft: '1px solid ' + COLORS.border,
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
@@ -422,7 +322,7 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
       />
 
       {/* Chat log */}
-      <div ref={scrollRef} style={{
+      <div ref={chatLogRef} style={{
         flex: 1, overflowY: 'auto', padding: '12px 14px',
       }}>
         {tokenWarning && (
@@ -434,7 +334,7 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
             <div style={{ fontWeight: 600, marginBottom: 4 }}>Long conversation</div>
             <div>Start fresh for best results.</div>
             <button
-              onClick={startNewChat}
+              onClick={clearSession}
               style={{
                 marginTop: 6, fontSize: 11, padding: '3px 8px',
                 background: COLORS.tealDark, color: '#FFFFFF',
@@ -445,7 +345,7 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
         )}
 
         {messages.map((m, i) => (
-          <ChatMessage key={i} msg={m} onChipClick={sendMessage} />
+          <ChatMessage key={i} msg={m} onChipClick={text => { sendMessage(text); }} />
         ))}
 
         {isLoading && <LoadingDots />}
@@ -476,7 +376,7 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
           }}
         />
         <button
-          onClick={() => sendMessage(inputText)}
+          onClick={() => { sendMessage(inputText); setInputText(''); }}
           disabled={isLoading || !inputText.trim()}
           style={{
             flexShrink: 0,
