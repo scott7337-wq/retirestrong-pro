@@ -84,6 +84,21 @@ export default function SpendingTab({ ctx }) {
         </div>
       </div>
 
+      {/* Estimated note */}
+      {!hasSubFields && (
+        <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          Breakdown estimated 60/40 — set precise amounts in Assumptions
+          {setActiveTab && (
+            <button
+              onClick={function() { setActiveTab('settings'); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#0A4D54', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+            >
+              Go to Assumptions →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Monthly entry grid */}
       <div style={CARD}>
         <h2 style={{ fontSize: 18, fontWeight: 500, color: '#1A1A1A', marginBottom: 16, marginTop: 0 }}>
