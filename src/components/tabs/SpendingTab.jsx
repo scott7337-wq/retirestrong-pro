@@ -87,7 +87,7 @@ export default function SpendingTab({ ctx }) {
           <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
             Essential Spending{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 60%)</span>}
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#0A4D54' }}>{fmtC(essential)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#0A4D54' }}>{'$' + essential.toLocaleString()}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
           <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
             Housing · Food · Transport &nbsp;·&nbsp; {essentialPct.toFixed(0)}%
           </div>
@@ -99,7 +99,7 @@ export default function SpendingTab({ ctx }) {
           <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
             Discretionary{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 40%)</span>}
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#8A5515' }}>{fmtC(discretionary)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#8A5515' }}>{'$' + discretionary.toLocaleString()}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
           <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
             Travel · Other &nbsp;·&nbsp; {discPct.toFixed(0)}%
           </div>

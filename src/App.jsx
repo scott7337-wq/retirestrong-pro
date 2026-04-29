@@ -966,6 +966,11 @@ export default function RetireStrongPlanner({ userId }) {
         });
         if (Object.keys(patch).length > 0) {
           setInp(function(prev) { return Object.assign({}, prev, patch); });
+          setRaw(function(prev) {
+            var rawPatch = {};
+            Object.keys(patch).forEach(function(k) { rawPatch[k] = String(patch[k]); });
+            return Object.assign({}, prev, rawPatch);
+          });
         }
       })
       .catch(function(err) { console.warn('expenses load failed:', err); });
