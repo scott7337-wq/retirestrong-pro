@@ -525,6 +525,15 @@ export default function CoachTab({ ctx }) {
     refreshScenarios();
   }, [authUser?.user_id, refreshScenarios]);
 
+  // Auto-send message pre-populated from another tab (e.g. Spending What-If cards)
+  useEffect(() => {
+    const msg = sessionStorage.getItem('coachAutoMessage');
+    if (msg) {
+      sessionStorage.removeItem('coachAutoMessage');
+      setTimeout(() => sendMessage(msg), 500);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;

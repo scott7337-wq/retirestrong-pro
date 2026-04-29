@@ -179,34 +179,48 @@ export default function SpendingTab({ ctx }) {
                 <h2 style={{ fontSize: 18, fontWeight: 500, color: '#1A1A1A', marginBottom: 14, marginTop: 0 }}>What If Spending Changes?</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   {[-500, -200, 200, 500].map(function(delta) {
-                    var newMonthly = monthlyBudget + delta;
+                    var base = inp.monthlyExpenses || 8000;
+                    var newMonthly = base + delta;
                     var newAnnual = newMonthly * 12;
-                    var newWR = totalPort > 0 ? (newAnnual / totalPort) * 100 : 0;
-                    var currentWR = totalPort > 0 ? (monthlyBudget * 12 / totalPort) * 100 : 0;
-                    var wrDelta = newWR - currentWR;
+                    var newWR = totalPort > 0 ? ((newAnnual / totalPort) * 100).toFixed(1) : '—';
+                    var currentWR = totalPort > 0 ? ((base * 12 / totalPort) * 100).toFixed(1) : '—';
+                    var wrDeltaNum = totalPort > 0 ? parseFloat(newWR) - parseFloat(currentWR) : 0;
                     var isGood = delta < 0;
                     var color = isGood ? '#3D6337' : '#8B3528';
                     var bg = isGood ? '#F0FDF4' : '#FEF2F2';
                     var border = isGood ? '#BBF7D0' : '#FECACA';
-                    var question = (delta < 0 ? 'What if I reduce spending by ' : 'What if I increase spending by ') + fmtC(Math.abs(delta)) + '/month?';
+                    var fmtExact = function(v) { return '$' + v.toLocaleString(); };
+                    var question = 'What if I spend ' + fmtExact(newMonthly) + ' per month instead of ' + fmtExact(base) + '?';
                     return (
                       <button
                         key={delta}
-                        onClick={function() { if (setActiveTab) setActiveTab('coach'); }}
-                        title={'Ask Coach: ' + question}
+                        onClick={function() {
+                          sessionStorage.setItem('coachAutoMessage', question);
+                          if (setActiveTab) setActiveTab('coach');
+                        }}
                         style={{ background: bg, border: '1px solid ' + border, borderRadius: 8, padding: '12px 14px', textAlign: 'center', cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
                       >
-                        <div style={{ fontSize: 12, fontWeight: 700, color: color, marginBottom: 4 }}>
-                          {delta > 0 ? '+' : ''}{fmtC(delta)}/mo
+                        <div style={{ fontSize: 12, fontWeight: 700, color: color, marginBottom: 6 }}>
+                          {delta > 0 ? '+' : '−'}${Math.abs(delta).toLocaleString()}/mo
                         </div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>{fmtC(newMonthly)}</div>
-                        <div style={{ fontSize: 11, color: '#6B7280', margin: '3px 0' }}>{fmtC(newAnnual)}/yr</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#1A1A1A', lineHeight: 1.1 }}>
+                          {fmtExact(newMonthly)}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6B7280', margin: '3px 0 8px' }}>
+                          {fmtExact(newAnnual)}/yr
+                        </div>
                         {totalPort > 0 && (
-                          <div style={{ fontSize: 11, color: color, fontWeight: 600 }}>
-                            WR {newWR.toFixed(1)}% ({wrDelta > 0 ? '+' : ''}{wrDelta.toFixed(1)}%)
+                          <div style={{ borderTop: '1px solid ' + border, paddingTop: 7, marginTop: 2 }}>
+                            <div style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 2 }}>Withdrawal rate</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: color }}>
+                              {newWR}%&nbsp;
+                              <span style={{ fontSize: 11, fontWeight: 400 }}>
+                                ({wrDeltaNum > 0 ? '+' : ''}{wrDeltaNum.toFixed(1)}%)
+                              </span>
+                            </div>
                           </div>
                         )}
-                        <div style={{ fontSize: 10, color: color, marginTop: 6, fontWeight: 600 }}>Ask Coach →</div>
+                        <div style={{ fontSize: 10, color: color, marginTop: 8, fontWeight: 600 }}>Ask Coach →</div>
                       </button>
                     );
                   })}
