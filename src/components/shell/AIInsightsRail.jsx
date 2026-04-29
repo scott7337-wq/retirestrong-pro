@@ -228,86 +228,260 @@ function PinModal({ workingScenario, onConfirm, onCancel }) {
   );
 }
 
-// ── Tab-specific static insights (shown before first user message) ──────────
-const TAB_INSIGHTS = {
-  dashboard: {
-    title: 'Plan Status',
-    bullets: [
-      'Check your success rate and years funded above.',
-      'IRMAA headroom and bracket room update monthly.',
-      'Ask me anything about your plan below.',
-    ],
-    action: null,
-  },
-  buckets: {
-    title: 'Portfolio Health',
-    bullets: [
-      'Bucket 1 should cover 2–3 years of spending.',
-      'Rebalance signals appear when allocations drift >5%.',
-      'Dividend and TIPS holdings reduce sequence risk.',
-    ],
-    action: null,
-  },
-  cashflow: {
-    title: 'Cash Flow',
-    bullets: [
-      'The gap years before SS are your sequence risk window.',
-      'Roth conversions in these years reduce future RMDs.',
-      'Click any year in the table to see source-of-funds detail.',
-    ],
-    action: null,
-  },
-  monte: {
-    title: 'Stress Testing',
-    bullets: [
-      'Bad First Five Years is your most relevant stress test.',
-      'A 15% spending cut in a downturn often saves the plan.',
-      'Guardrails strategies automate this adjustment.',
-    ],
-    action: null,
-  },
-  spending: {
-    title: 'Spending',
-    bullets: [
-      'Essential expenses should be covered by guaranteed income.',
-      'Discretionary spending is your primary adjustment lever.',
-      'YTD actual vs budget trend shows if you\'re on track.',
-    ],
-    action: null,
-  },
-  incometax: {
-    title: 'Tax Efficiency',
-    bullets: [
-      'IRMAA headroom is your most actionable number right now.',
-      'Convert to the top of your bracket before RMDs begin.',
-      'IRA draws count toward MAGI — sequence matters.',
-    ],
-    action: { label: 'Ask about conversions', text: 'How much should I convert this year?' },
-  },
-  roth: {
-    title: 'Roth Window',
-    bullets: [
-      'Your conversion window closes when RMDs begin at 73.',
-      'The survivor tax cliff makes conversions more valuable now.',
-      'IRMAA Tier 1 at $212k MAGI is your binding constraint.',
-    ],
-    action: { label: 'Calculate my optimal conversion', text: 'What is my optimal Roth conversion this year?' },
-  },
-  settings: {
-    title: 'Assumptions',
-    bullets: [
-      'Monthly expenses drive every projection — get this right.',
-      'Return assumptions use CAPE-based estimates.',
-      'Inflation at 3% is conservative — adjust if needed.',
-    ],
-    action: null,
-  },
-};
+// ── InsightCard ─────────────────────────────────────────────────────────────
+function InsightCard({ title, items, action, onAction, priority }) {
+  return (
+    <div style={{
+      background: COLORS.cardBg,
+      border: priority ? '2px solid ' + COLORS.tealDark : '1px solid ' + COLORS.border,
+      borderRadius: 10,
+      padding: '12px 14px',
+      boxShadow: priority ? '0 2px 8px rgba(10,77,84,0.10)' : '0 1px 3px rgba(0,0,0,0.04)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    }}>
+      <div style={{
+        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.06em', color: COLORS.tealDark,
+      }}>{title}</div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map((item, i) => (
+          <li key={i} style={{
+            fontSize: 12.5,
+            color: item.highlight ? COLORS.textPrimary : COLORS.textSecondary,
+            fontWeight: item.highlight ? 600 : 400,
+            lineHeight: 1.5,
+            display: 'flex', gap: 6, alignItems: 'flex-start',
+          }}>
+            {item.dot && (
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: item.dotColor || COLORS.tealMid,
+                flexShrink: 0, marginTop: 6,
+              }} />
+            )}
+            <span>{item.text}</span>
+          </li>
+        ))}
+      </ul>
+      {action && (
+        <button onClick={onAction} style={{
+          background: COLORS.tealDark, color: 'white', border: 'none',
+          borderRadius: 7, padding: '8px 12px', fontSize: 12, fontWeight: 600,
+          cursor: 'pointer', textAlign: 'left', marginTop: 2,
+        }}>{action} →</button>
+      )}
+    </div>
+  );
+}
+
+// ── Data-driven rail content per tab ────────────────────────────────────────
+function buildRailContent(activeTab, ctx, sendMessage) {
+  const cf = ctx?.cashFlow || [];
+  const inp = ctx?.inp || {};
+  const fmt = ctx?.fmtC || (v => '$' + Math.round(v).toLocaleString());
+  const successRate = ctx?.successRate || 0;
+  const totalPort = ctx?.totalPort || 0;
+
+  const srColor = successRate >= 85 ? '#3D6337' : successRate >= 70 ? '#D97706' : '#8B3528';
+  const firstGap = cf.find(r => (r.gap || 0) > 0);
+  const yr0 = cf[0] || {};
+
+  switch (activeTab) {
+    case 'dashboard': return [
+      {
+        title: 'Plan Health', priority: true,
+        items: [
+          { text: successRate + '% success rate (500 MC runs)', highlight: true, dot: true, dotColor: srColor },
+          { text: totalPort ? fmt(totalPort) + ' total portfolio' : 'Portfolio loaded', dot: true },
+          firstGap
+            ? { text: 'First income gap at age ' + firstGap.age, dot: true, dotColor: '#D97706' }
+            : { text: 'No income gaps projected', dot: true, dotColor: '#3D6337' },
+        ],
+      },
+      {
+        title: 'This Year',
+        items: [
+          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 8000) },
+          { text: yr0.rothConv ? 'Roth conversion: ' + fmt(yr0.rothConv) : 'No Roth conversion planned yet' },
+          { text: 'IRMAA headroom available — check Income & Tax tab' },
+        ],
+        action: 'Ask about IRMAA headroom',
+        onAction: () => sendMessage('What is my IRMAA headroom this year?'),
+      },
+    ];
+
+    case 'buckets': return [
+      {
+        title: 'Bucket Status', priority: true,
+        items: [
+          { text: 'Bucket 1 (Cash): Review runway above', dot: true },
+          { text: 'Bucket 2 (Bonds/TIPS): Intermediate buffer', dot: true },
+          { text: 'Bucket 3 (Growth): Long-term engine', dot: true },
+        ],
+      },
+      {
+        title: 'Sequence Risk',
+        items: [
+          { text: '2–3 years cash in B1 protects against early downturns' },
+          { text: 'Refill B1 from dividends in good years' },
+          { text: 'Avoid selling growth assets in down markets' },
+        ],
+        action: 'Stress test my plan',
+        onAction: () => sendMessage('How does my plan hold up in a bad sequence?'),
+      },
+    ];
+
+    case 'cashflow': {
+      const gapYears = cf.filter(r => (r.gap || 0) > 0);
+      return [
+        {
+          title: 'Cash Flow', priority: true,
+          items: [
+            {
+              text: firstGap
+                ? 'Income gap starts at age ' + firstGap.age + ' — ' + fmt(firstGap.gap || 0) + '/yr'
+                : 'No income gaps in projection',
+              highlight: true, dot: true, dotColor: firstGap ? '#D97706' : '#3D6337',
+            },
+            { text: gapYears.length + ' gap years total', dot: true },
+            { text: 'SS income starts at age ' + (inp.ssAge || 70), dot: true },
+          ],
+        },
+        {
+          title: 'Roth Opportunity',
+          items: [
+            { text: 'Convert in gap years before SS starts' },
+            { text: 'Each conversion year reduces future RMDs' },
+            { text: 'Survivor benefit makes conversions more valuable' },
+          ],
+          action: 'Optimize my conversions',
+          onAction: () => sendMessage('What is my optimal Roth conversion strategy?'),
+        },
+      ];
+    }
+
+    case 'monte': return [
+      {
+        title: 'Scenario Analysis', priority: true,
+        items: [
+          { text: 'Base case: ' + successRate + '% success', highlight: true, dot: true, dotColor: srColor },
+          { text: 'Bad First Five Years is your key stress test', dot: true },
+          { text: 'Guardrails can add 10–15% success rate', dot: true },
+        ],
+      },
+      {
+        title: 'Key Levers',
+        items: [
+          { text: 'Spending 10% less adds ~8–12% success rate' },
+          { text: 'Delaying SS to 70 adds longevity protection' },
+          { text: 'One more year of work often moves the needle most' },
+        ],
+        action: 'What if I add guardrails?',
+        onAction: () => sendMessage('What if I add Guyton-Klinger guardrails to my spending?'),
+      },
+    ];
+
+    case 'spending': return [
+      {
+        title: 'Spending Health', priority: true,
+        items: [
+          { text: 'Budget: ' + fmt(inp.monthlyExpenses || 8000) + '/mo', highlight: true, dot: true },
+          { text: 'Essential expenses should match guaranteed income' },
+          { text: 'Discretionary is your main adjustment lever' },
+        ],
+      },
+      {
+        title: 'What-If',
+        items: [
+          { text: 'Cutting $500/mo adds roughly 2–3% success rate' },
+          { text: 'Smile-shaped spending reduces early withdrawals' },
+          { text: 'Healthcare costs typically peak at 75–80' },
+        ],
+        action: 'Model a spending change',
+        onAction: () => sendMessage('What if I reduce spending by $500/month?'),
+      },
+    ];
+
+    case 'incometax': return [
+      {
+        title: 'Tax Efficiency', priority: true,
+        items: [
+          { text: 'IRMAA Tier 1 threshold: $212,000 MAGI', highlight: true, dot: true },
+          { text: '22% bracket ceiling: ~$201,000 MFJ', dot: true },
+          { text: 'Roth conversions count toward MAGI', dot: true, dotColor: '#D97706' },
+        ],
+        action: 'Calculate my headroom',
+        onAction: () => sendMessage('What is my IRMAA headroom this year?'),
+      },
+      {
+        title: "This Year's Priority",
+        items: [
+          { text: 'Convert up to IRMAA ceiling first' },
+          { text: 'IRA draws + conversions = MAGI' },
+          { text: 'Two-year lookback: 2026 income affects 2028 premiums' },
+        ],
+      },
+    ];
+
+    case 'roth': return [
+      {
+        title: 'Conversion Window', priority: true,
+        items: [
+          { text: 'Window closes when RMDs begin at 73', highlight: true, dot: true },
+          { text: (73 - (inp.currentAge || 66)) + ' years remaining', dot: true, dotColor: '#D97706' },
+          { text: 'Survivor tax cliff makes conversions urgent', dot: true },
+        ],
+        action: 'What should I convert?',
+        onAction: () => sendMessage('How much should I convert to Roth this year?'),
+      },
+      {
+        title: 'Strategy',
+        items: [
+          { text: 'Convert to top of 22% bracket each year' },
+          { text: 'Stay under IRMAA Tier 1 ($212k MAGI)' },
+          { text: 'Pay taxes from taxable account if possible' },
+        ],
+      },
+    ];
+
+    case 'settings': return [
+      {
+        title: 'Key Assumptions', priority: true,
+        items: [
+          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 8000) + ' — drives all projections', highlight: true, dot: true },
+          { text: 'Inflation: 3.0% (conservative)', dot: true },
+          { text: 'CAPE-based return estimates applied', dot: true },
+        ],
+      },
+      {
+        title: 'Sensitivity',
+        items: [
+          { text: 'Expenses have 3× the impact of return assumptions' },
+          { text: 'Spending is your most controllable variable' },
+          { text: 'Stress test with lower returns in the Stress Test tab' },
+        ],
+      },
+    ];
+
+    default: return [
+      {
+        title: 'RetireStrong',
+        items: [
+          { text: 'Ask me anything about your plan below' },
+          { text: 'I have full context and can run projections' },
+        ],
+      },
+    ];
+  }
+}
 
 // ── Main rail component ─────────────────────────────────────────────────────
 // Props:
 //   activeTab — current plan tab (string), sent to server for context
-export default function AIInsightsRail({ activeTab = 'overview' }) {
+//   ctx       — tabCtx from App.jsx for data-driven insight cards
+export default function AIInsightsRail({ activeTab = 'overview', ctx }) {
   const { user: authUser } = useAuth();
 
   const {
@@ -403,46 +577,23 @@ export default function AIInsightsRail({ activeTab = 'overview' }) {
 
       {/* Static insights or chat log */}
       {!hasUserMessage ? (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {(() => {
-            const insight = TAB_INSIGHTS[activeTab] || TAB_INSIGHTS.dashboard;
-            return (
-              <>
-                <div style={{
-                  fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.06em', color: COLORS.textMuted, marginBottom: 10,
-                }}>{insight.title}</div>
-                <ul style={{
-                  listStyle: 'none', padding: 0, margin: '0 0 16px',
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                }}>
-                  {insight.bullets.map((b, i) => (
-                    <li key={i} style={{
-                      fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.5,
-                      paddingLeft: 12, borderLeft: '2px solid ' + COLORS.border,
-                    }}>{b}</li>
-                  ))}
-                </ul>
-                {insight.action && (
-                  <button
-                    onClick={() => sendMessage(insight.action.text)}
-                    style={{
-                      width: '100%', background: COLORS.tealDark, color: 'white',
-                      border: 'none', borderRadius: 8, padding: '9px 14px',
-                      fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left',
-                    }}
-                  >{insight.action.label} →</button>
-                )}
-                <div style={{
-                  marginTop: 16, padding: '10px 12px',
-                  background: '#F2F1EC', borderRadius: 8,
-                  fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5,
-                }}>
-                  Ask me anything about your plan — I have full context and can run projections.
-                </div>
-              </>
-            );
-          })()}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {buildRailContent(activeTab, ctx, sendMessage).map((card, i) => (
+            <InsightCard
+              key={i}
+              title={card.title}
+              items={card.items}
+              action={card.action}
+              onAction={card.onAction}
+              priority={card.priority}
+            />
+          ))}
+          <div style={{
+            padding: '10px 12px', background: '#F2F1EC', borderRadius: 8,
+            fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5,
+          }}>
+            Ask me anything — I have full context and can run projections.
+          </div>
         </div>
       ) : (
         <div ref={chatLogRef} style={{

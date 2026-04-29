@@ -1,6 +1,17 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+function successRateColor(rate) {
+  if (rate >= 85) return 'var(--rs-green, #3D6337)';
+  if (rate >= 70) return 'var(--rs-amber, #D97706)';
+  return 'var(--rs-red, #8B3528)';
+}
+function successRateBg(rate) {
+  if (rate >= 85) return '#E6F1DD';
+  if (rate >= 70) return '#FEF3C7';
+  return '#F8E4D8';
+}
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChatSession } from '../../hooks/useChatSession.js';
 
@@ -323,7 +334,12 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
     : '#8B3528';
 
   const chartData = cashFlow
-    ? cashFlow.map(r => ({ age: r.age, balance: Math.round(r.balance / 1000) }))
+    ? cashFlow.map(r => ({
+        age: r.age,
+        total: Math.round((r.balance || 0) / 1000),
+        ira:   Math.round((r.iraBalance || 0) / 1000),
+        roth:  Math.round((r.rothBalance || 0) / 1000),
+      }))
     : [];
 
   return (
@@ -387,50 +403,80 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
           <div style={{
             background: COLORS.cardBg,
             border: '1px solid ' + COLORS.border,
-            borderRadius: 12, padding: '14px 16px',
+            borderRadius: 12, padding: '16px',
           }}>
             <div style={{
-              fontSize: 11, fontWeight: 600, color: COLORS.textMuted,
-              marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em',
-            }}>Portfolio trajectory</div>
-            <ResponsiveContainer width="100%" height={140}>
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'flex-start', marginBottom: 12,
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
+                  Portfolio Trajectory
+                </div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>
+                  Total · IRA · Roth · real $
+                </div>
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 700,
+                color: successRateColor(successRate),
+                background: successRateBg(successRate),
+                padding: '3px 8px', borderRadius: 20,
+              }}>{successRate}% success</div>
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
               <LineChart
                 data={chartData}
-                margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+                margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
               >
                 <XAxis
                   dataKey="age"
                   tick={{ fontSize: 10, fill: '#6B7280' }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={4}
+                  tickLine={false} axisLine={false} interval={4}
                 />
                 <YAxis
                   tick={{ fontSize: 10, fill: '#6B7280' }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={v => '$' + v + 'k'}
-                  width={45}
+                  tickLine={false} axisLine={false}
+                  tickFormatter={v => '$' + v + 'k'} width={44}
                 />
                 <Tooltip
-                  formatter={v => ['$' + v + 'k', 'Balance']}
+                  formatter={(v, name) => ['$' + v + 'k', name === 'total' ? 'Total' : name === 'ira' ? 'IRA' : 'Roth']}
                   labelFormatter={l => 'Age ' + l}
                   contentStyle={{
-                    fontSize: 12,
-                    border: '1px solid ' + COLORS.border,
-                    borderRadius: 6,
+                    fontSize: 11, border: '1px solid ' + COLORS.border,
+                    borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="balance"
-                  stroke={COLORS.tealDark}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
+                <Line type="monotone" dataKey="total"
+                  stroke={COLORS.tealDark} strokeWidth={2.5}
+                  dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="ira"
+                  stroke="#3D6337" strokeWidth={1.5} strokeDasharray="4 2"
+                  dot={false} activeDot={{ r: 3 }} />
+                <Line type="monotone" dataKey="roth"
+                  stroke={COLORS.tealMid} strokeWidth={1.5} strokeDasharray="2 3"
+                  dot={false} activeDot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
+            <div style={{
+              display: 'flex', gap: 14, marginTop: 8,
+              paddingTop: 8, borderTop: '1px solid ' + COLORS.border,
+            }}>
+              {[
+                { color: COLORS.tealDark, label: 'Total', dash: false },
+                { color: '#3D6337',       label: 'IRA',   dash: true },
+                { color: COLORS.tealMid,  label: 'Roth',  dash: true },
+              ].map(l => (
+                <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <svg width="16" height="4">
+                    <line x1="0" y1="2" x2="16" y2="2"
+                      stroke={l.color} strokeWidth={l.dash ? 1.5 : 2.5}
+                      strokeDasharray={l.dash ? '4 2' : 'none'} />
+                  </svg>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>{l.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

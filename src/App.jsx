@@ -1973,6 +1973,7 @@ export default function RetireStrongPlanner({ userId }) {
           />
         }
         activeTab={activeTab}
+        ctx={tabCtx}
       >
         <AssetEditorModal />
         <MoveBucketModal />

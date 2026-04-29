@@ -5,7 +5,7 @@ import AIInsightsRail from './AIInsightsRail.jsx';
 /**
  * AppShell — 3-column layout
  *
- * Layout: [Sidebar 200px] | [AIInsightsRail 300px] | [main content flex-1]
+ * Layout: [Sidebar 200px] | [main content flex-1] | [AIInsightsRail 300px]
  *
  * When activeTab === 'coach', the rail is hidden because CoachTab
  * renders its own full-page chat experience.
@@ -13,9 +13,10 @@ import AIInsightsRail from './AIInsightsRail.jsx';
  * Props:
  *   sidebar   — pre-rendered <Sidebar> from App.jsx
  *   activeTab — current tab, forwarded to AIInsightsRail; hides rail on 'coach'
+ *   ctx       — tabCtx from App.jsx, forwarded to AIInsightsRail for data-driven cards
  *   children  — tab content rendered in the main pane
  */
-export default function AppShell({ sidebar, activeTab, children }) {
+export default function AppShell({ sidebar, activeTab, ctx, children }) {
   const showRail = activeTab !== 'coach';
 
   return (
@@ -41,7 +42,7 @@ export default function AppShell({ sidebar, activeTab, children }) {
       </main>
 
       {showRail && (
-        <AIInsightsRail activeTab={activeTab} />
+        <AIInsightsRail activeTab={activeTab} ctx={ctx} />
       )}
     </div>
   );
