@@ -1,5 +1,5 @@
 # RetireStrong Pro — Project State Briefing
-## Updated April 29, 2026 — 28 commits from baseline
+## Updated April 29, 2026 — 30 commits from baseline
 
 ---
 
@@ -79,12 +79,18 @@ Directory: ~/retirestrong-pro
 - run_projection reads working scenario overrides automatically
 - Migration 002 applied to fix missing scenario columns
 
-### Brief 10 — Phase B layout (two-pane) (NEXT)
-- Adopt mockup layout from specs/mockups/chat-explore.html
-- Explore mode: 42% chat / 58% plan
-- Commit mode: 32% chat / 68% plan
-- Working scenario tab with dashed border
-- Pin flow modal → promotes working to named scenario
+### Brief 10 — Phase B layout (two-pane) (COMPLETE)
+- TopBar with Explore/Commit mode toggle (420px/320px chat pane)
+- DiffStrip at page level with orange pulse dot, Discard + Pin buttons
+- PinModal with name + note fields, success toast
+- AIInsightsRail lifted into AppShell, workingScenario state owned by AppShell
+- DELETE /api/scenarios/working + POST /api/scenarios/pin endpoints
+- CSS grid layout with 200ms transition on mode switch
+
+### Brief 11 — pin_scenario tool + named scenario tabs (NEXT)
+- AI can call pin_scenario tool directly from chat
+- Named scenarios appear as tabs above the plan chart
+- Scenario comparison (Phase B.2) entry point
 
 ---
 
