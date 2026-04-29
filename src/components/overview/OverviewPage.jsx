@@ -297,7 +297,7 @@ export default function OverviewPage({
 
       {/* Sparkline + What-If side by side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <PortfolioSparkline cashFlow={cashFlow} setActiveTab={setActiveTab} />
+        <PortfolioSparkline cashFlow={cashFlow} setActiveTab={setActiveTab} successRate={successRate} />
         <QuickWhatIf setActiveTab={setActiveTab} />
       </div>
 

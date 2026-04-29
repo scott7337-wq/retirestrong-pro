@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 export default function SpendingTab({ ctx }) {
   var { inp, setField, fmtC, fmtFull,
         inpWithAssets, monthlySpend, updateMonthSpend, derivedTotals,
-        BORDER, BORDER2, TTip } = ctx;
+        BORDER, BORDER2, TTip, setActiveTab } = ctx;
   var authCtx = useAuth();
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
@@ -16,9 +16,17 @@ export default function SpendingTab({ ctx }) {
   var totalPort = Object.values(derivedTotals || {}).reduce(function(s, v) { return s + (v || 0); }, 0);
   var monthlyBudget = inpWithAssets.monthlyExpenses || 0;
 
-  // Essential vs discretionary from inp breakdown fields
-  var essential = (inp.housingMonthly || 0) + (inp.foodMonthly || 0) + (inp.transportMonthly || 0);
-  var discretionary = (inp.travelMonthly || 0) + (inp.otherMonthly || 0);
+  // Essential vs discretionary — use sub-fields if entered, else 60/40 fallback
+  var totalMonthly = inp.monthlyExpenses || 8000;
+  var hasSubFields = (inp.housingMonthly || 0) + (inp.foodMonthly || 0) +
+                     (inp.transportMonthly || 0) + (inp.travelMonthly || 0) +
+                     (inp.otherMonthly || 0) > 0;
+  var essential = hasSubFields
+    ? (inp.housingMonthly || 0) + (inp.foodMonthly || 0) + (inp.transportMonthly || 0)
+    : Math.round(totalMonthly * 0.60);
+  var discretionary = hasSubFields
+    ? (inp.travelMonthly || 0) + (inp.otherMonthly || 0)
+    : Math.round(totalMonthly * 0.40);
   var breakdown = essential + discretionary;
   var essentialPct = breakdown > 0 ? (essential / breakdown) * 100 : 0;
   var discPct = breakdown > 0 ? (discretionary / breakdown) * 100 : 0;
@@ -49,30 +57,32 @@ export default function SpendingTab({ ctx }) {
       </div>
 
       {/* Essential / Discretionary breakdown */}
-      {breakdown > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-          <div style={{ background: '#FFFFFF', borderLeft: '4px solid #0A4D54', border: '1px solid #E8E4DC', borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Essential Spending</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#0A4D54' }}>{fmtC(essential)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
-              Housing · Food · Transport &nbsp;·&nbsp; {essentialPct.toFixed(0)}% of breakdown
-            </div>
-            <div style={{ height: 6, background: '#E8E4DC', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: essentialPct + '%', background: '#0A4D54', borderRadius: 3 }}/>
-            </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div style={{ background: '#FFFFFF', borderLeft: '4px solid #0A4D54', border: '1px solid #E8E4DC', borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+            Essential Spending{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 60%)</span>}
           </div>
-          <div style={{ background: '#FFFFFF', borderLeft: '4px solid #8A5515', border: '1px solid #E8E4DC', borderRadius: 10, padding: '14px 16px' }}>
-            <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Discretionary Spending</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: '#8A5515' }}>{fmtC(discretionary)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
-              Travel · Other &nbsp;·&nbsp; {discPct.toFixed(0)}% of breakdown
-            </div>
-            <div style={{ height: 6, background: '#E8E4DC', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: discPct + '%', background: '#8A5515', borderRadius: 3 }}/>
-            </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#0A4D54' }}>{fmtC(essential)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
+          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
+            Housing · Food · Transport &nbsp;·&nbsp; {essentialPct.toFixed(0)}%
+          </div>
+          <div style={{ height: 6, background: '#E8E4DC', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: essentialPct + '%', background: '#0A4D54', borderRadius: 3 }}/>
           </div>
         </div>
-      )}
+        <div style={{ background: '#FFFFFF', borderLeft: '4px solid #8A5515', border: '1px solid #E8E4DC', borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+            Discretionary{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 40%)</span>}
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#8A5515' }}>{fmtC(discretionary)}<span style={{ fontSize: 13, color: '#6B7280', fontWeight: 400 }}>/mo</span></div>
+          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
+            Travel · Other &nbsp;·&nbsp; {discPct.toFixed(0)}%
+          </div>
+          <div style={{ height: 6, background: '#E8E4DC', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: discPct + '%', background: '#8A5515', borderRadius: 3 }}/>
+          </div>
+        </div>
+      </div>
 
       {/* Monthly entry grid */}
       <div style={CARD}>
@@ -178,8 +188,14 @@ export default function SpendingTab({ ctx }) {
                     var color = isGood ? '#3D6337' : '#8B3528';
                     var bg = isGood ? '#F0FDF4' : '#FEF2F2';
                     var border = isGood ? '#BBF7D0' : '#FECACA';
+                    var question = (delta < 0 ? 'What if I reduce spending by ' : 'What if I increase spending by ') + fmtC(Math.abs(delta)) + '/month?';
                     return (
-                      <div key={delta} style={{ background: bg, border: '1px solid ' + border, borderRadius: 8, padding: '12px 14px', textAlign: 'center' }}>
+                      <button
+                        key={delta}
+                        onClick={function() { if (setActiveTab) setActiveTab('coach'); }}
+                        title={'Ask Coach: ' + question}
+                        style={{ background: bg, border: '1px solid ' + border, borderRadius: 8, padding: '12px 14px', textAlign: 'center', cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
+                      >
                         <div style={{ fontSize: 12, fontWeight: 700, color: color, marginBottom: 4 }}>
                           {delta > 0 ? '+' : ''}{fmtC(delta)}/mo
                         </div>
@@ -190,7 +206,8 @@ export default function SpendingTab({ ctx }) {
                             WR {newWR.toFixed(1)}% ({wrDelta > 0 ? '+' : ''}{wrDelta.toFixed(1)}%)
                           </div>
                         )}
-                      </div>
+                        <div style={{ fontSize: 10, color: color, marginTop: 6, fontWeight: 600 }}>Ask Coach →</div>
+                      </button>
                     );
                   })}
                 </div>

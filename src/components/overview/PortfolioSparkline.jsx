@@ -1,57 +1,96 @@
 import React from 'react';
-import { LineChart, Line, YAxis, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-export default function PortfolioSparkline({ cashFlow, setActiveTab }) {
+var TEAL_DARK = '#0A4D54';
+var GREEN     = '#3D6337';
+var TEAL_MID  = '#4A9E8E';
+var BORDER    = '#E8E4DC';
+var MUTED     = '#9CA3AF';
+
+function srColor(rate) {
+  if (rate >= 85) return '#3D6337';
+  if (rate >= 70) return '#D97706';
+  return '#8B3528';
+}
+function srBg(rate) {
+  if (rate >= 85) return '#E6F1DD';
+  if (rate >= 70) return '#FEF3C7';
+  return '#F8E4D8';
+}
+
+export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate }) {
   if (!cashFlow || cashFlow.length === 0) return null;
 
   var data = cashFlow.map(function(r) {
-    return { year: r.year, portfolio: Math.round((r.balance || 0) / 1000) };
+    return {
+      age:   r.age  || r.year,
+      total: Math.round((r.balance     || 0) / 1000),
+      ira:   Math.round((r.iraBalance  || 0) / 1000),
+      roth:  Math.round((r.rothBalance || 0) / 1000),
+    };
   });
 
-  var maxVal = Math.max.apply(null, data.map(function(d) { return d.portfolio; }));
-  var yMax = Math.ceil(maxVal / 500) * 500;
+  var sr = parseFloat(successRate) || 0;
 
   return (
-    <div style={{
-      background: '#fff',
-      border: '1px solid #E8E5E0',
-      borderRadius: 12,
-      padding: '16px 20px 12px',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Portfolio Projection</div>
-        <div style={{ fontSize: 11, color: '#9CA3AF' }}>{data[0].year} – {data[data.length - 1].year}</div>
+    <div style={{ background: '#fff', border: '1px solid ' + BORDER, borderRadius: 12, padding: '16px 20px 12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>Portfolio Trajectory</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Total · IRA · Roth · real $</div>
+        </div>
+        {sr > 0 && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: srColor(sr), background: srBg(sr), padding: '3px 8px', borderRadius: 20 }}>
+            {sr}% success
+          </div>
+        )}
       </div>
-      <div style={{ height: 120 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-            <YAxis
-              tickFormatter={function(v) { return v >= 1000 ? '$' + (v/1000).toFixed(0) + 'M' : '$' + v + 'K'; }}
-              ticks={[0, Math.round(yMax * 0.33 / 500) * 500, Math.round(yMax * 0.66 / 500) * 500, yMax]}
-              domain={[0, yMax]}
-              width={40}
-              tick={{ fontSize: 10, fill: '#9CA3AF' }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <ReferenceLine y={0} stroke="#E8E5E0" strokeWidth={1} />
-            <Line
-              type="monotone"
-              dataKey="portfolio"
-              stroke="#0F766E"
-              strokeWidth={2}
-              dot={false}
-              activeDot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div style={{ textAlign: 'right', marginTop: 4 }}>
+
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+          <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
+          <YAxis
+            tick={{ fontSize: 10, fill: '#6B7280' }}
+            tickLine={false} axisLine={false} width={44}
+            tickFormatter={function(v) { return '$' + v + 'k'; }}
+          />
+          <Tooltip
+            formatter={function(v, name) {
+              return ['$' + v + 'k', name === 'total' ? 'Total' : name === 'ira' ? 'IRA' : 'Roth'];
+            }}
+            labelFormatter={function(l) { return 'Age ' + l; }}
+            contentStyle={{ fontSize: 11, border: '1px solid ' + BORDER, borderRadius: 6 }}
+          />
+          <Line type="monotone" dataKey="total" stroke={TEAL_DARK} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+          <Line type="monotone" dataKey="ira"   stroke={GREEN}     strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} />
+          <Line type="monotone" dataKey="roth"  stroke={TEAL_MID}  strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid ' + BORDER }}>
+        <div style={{ display: 'flex', gap: 14 }}>
+          {[
+            { color: TEAL_DARK, label: 'Total', dash: false },
+            { color: GREEN,     label: 'IRA',   dash: true },
+            { color: TEAL_MID,  label: 'Roth',  dash: true },
+          ].map(function(l) {
+            return (
+              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <svg width="16" height="4">
+                  <line x1="0" y1="2" x2="16" y2="2"
+                    stroke={l.color} strokeWidth={l.dash ? 1.5 : 2.5}
+                    strokeDasharray={l.dash ? '4 2' : 'none'} />
+                </svg>
+                <span style={{ fontSize: 11, color: MUTED }}>{l.label}</span>
+              </div>
+            );
+          })}
+        </div>
         <button
           onClick={function() { setActiveTab('cashflow'); }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#0F766E', fontWeight: 500 }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: TEAL_DARK, fontWeight: 500 }}
         >
-          View full projection →
+          Full projection →
         </button>
       </div>
     </div>

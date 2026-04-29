@@ -313,6 +313,11 @@ const TAB_CHIPS = {
     'What if inflation is 4%?',
     'How sensitive is my plan to spending?',
   ],
+  spending: [
+    'What if I spend $500 less/month?',
+    "What's my safe withdrawal rate?",
+    'Model smile-shaped spending',
+  ],
 };
 
 // ── Data-driven rail content per tab ────────────────────────────────────────
