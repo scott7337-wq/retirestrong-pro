@@ -962,6 +962,22 @@ export default function RetireStrongPlanner({ userId }) {
       })
       .catch(function(err) { console.warn('spending actuals load failed:', err); });
 
+    // Income tracking — flat { field_key: amount } object
+    fetch('/api/income_tracking?user_id=' + uid + '&year=' + actYear)
+      .then(function(r) { return r.json(); })
+      .then(function(obj) {
+        if (obj && typeof obj === 'object' && !obj.error) {
+          setThisYear(function(prev) {
+            var patch = {};
+            ['incW2','incSeverance','incIRA','incRothConv','incOther','incDividends'].forEach(function(k) {
+              if (obj[k] !== undefined) patch[k] = parseFloat(obj[k]) || 0;
+            });
+            return Object.assign({}, prev, patch);
+          });
+        }
+      })
+      .catch(function(err) { console.warn('income tracking load failed:', err); });
+
     // All domain tables in parallel
     Promise.allSettled([
       fetch('/api/profile?user_id='            + uid).then(function(r) { return r.json(); }),
@@ -1234,17 +1250,24 @@ export default function RetireStrongPlanner({ userId }) {
 
   // ── v13: This Year income tracker state ───────────────────────────────────────
   var thisYearState = useState({
-    w2Ytd: 0,            // W-2 income through April 10
-    severanceGross: 0,   // Gross severance
-    severanceNet: 0,     // Net severance after tax + garnishment
-    otherIncome: 0,      // Any other 2026 income
-    fedWithheld: 0,      // Federal tax already withheld
-    stateWithheld: 0,    // State tax already withheld
+    incW2: 0,
+    incSeverance: 0,
+    incIRA: 0,
+    incRothConv: 0,
+    incOther: 0,
+    incDividends: 0,
   });
   var thisYear = thisYearState[0]; var setThisYear = thisYearState[1];
   var updateThisYear = useCallback(function(key, val) {
     setThisYear(function(p) { var n = Object.assign({}, p); n[key] = parseFloat(val) || 0; return n; });
-  }, []);
+    if (authUser && authUser.user_id) {
+      fetch('/api/income_tracking/' + encodeURIComponent(key), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year: new Date().getFullYear(), amount: parseFloat(val) || 0 }),
+      }).catch(function(err) { console.warn('income tracking save failed:', err); });
+    }
+  }, [authUser]);
 
   // ── v13: Quarterly balance ledger state ───────────────────────────────────────
   var ledgerState = useState([]);
