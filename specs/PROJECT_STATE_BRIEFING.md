@@ -1,5 +1,5 @@
 # RetireStrong Pro — Project State Briefing
-## Updated April 29, 2026 — 26 commits from baseline
+## Updated April 29, 2026 — 28 commits from baseline
 
 ---
 
@@ -71,18 +71,20 @@ Directory: ~/retirestrong-pro
 - 89% success rate, $1.677M portfolio verified against
   Scott's actual data
 
-### Brief 9 — propose_change tool (ephemeral scenarios)
-- AI can tentatively modify plan inputs for what-if
+### Brief 9 — propose_change tool (COMPLETE)
+- propose_change and discard_working_scenario tools wired
 - Working scenario stored in scenarios table (is_working=true)
-- Diff strip in UI shows what changed
-- This is Phase B entry point
+- Diff strip appears in rail with pulsing orange dot
+- Discard returns to base plan
+- run_projection reads working scenario overrides automatically
+- Migration 002 applied to fix missing scenario columns
 
-### Brief 10 — Phase B layout (two-pane)
+### Brief 10 — Phase B layout (two-pane) (NEXT)
 - Adopt mockup layout from specs/mockups/chat-explore.html
 - Explore mode: 42% chat / 58% plan
 - Commit mode: 32% chat / 68% plan
 - Working scenario tab with dashed border
-- Pin flow modal
+- Pin flow modal → promotes working to named scenario
 
 ---
 
