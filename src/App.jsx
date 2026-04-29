@@ -943,39 +943,17 @@ export default function RetireStrongPlanner({ userId }) {
       .catch(function() { setDataSource('offline'); });
   }, []);
 
-  // ── Load expense sub-fields and spending actuals from DB ──────────────────
-  // expense_budget → inp.housingMonthly / foodMonthly / transportMonthly / travelMonthly / otherMonthly
-  // spending_actuals → monthlySpend { jan, feb, ... }
+  // ── Full plan hydration from DB on mount ─────────────────────────────────
+  // Loads all domain tables in parallel; patches both inp and raw so that
+  // Settings.jsx inputs (which prefer raw over inp) show DB values.
+  // Promise.allSettled ensures one failed endpoint never blocks the rest.
   useEffect(function() {
-    if (!API_BASE || !authUser || !authUser.user_id) return;
+    if (!authUser || !authUser.user_id) return;
     var uid = encodeURIComponent(authUser.user_id);
-    var year = new Date().getFullYear();
 
-    fetch(API_BASE + '/api/expenses?user_id=' + uid)
-      .then(function(r) { return r.json(); })
-      .then(function(rows) {
-        if (!Array.isArray(rows) || rows.length === 0) return;
-        var patch = {};
-        rows.forEach(function(r) {
-          var amt = parseFloat(r.monthly_amount) || 0;
-          if (r.category === 'housing')        patch.housingMonthly   = amt;
-          if (r.category === 'food')           patch.foodMonthly      = amt;
-          if (r.category === 'transportation') patch.transportMonthly = amt;
-          if (r.category === 'travel')         patch.travelMonthly    = amt;
-          if (r.category === 'other')          patch.otherMonthly     = amt;
-        });
-        if (Object.keys(patch).length > 0) {
-          setInp(function(prev) { return Object.assign({}, prev, patch); });
-          setRaw(function(prev) {
-            var rawPatch = {};
-            Object.keys(patch).forEach(function(k) { rawPatch[k] = String(patch[k]); });
-            return Object.assign({}, prev, rawPatch);
-          });
-        }
-      })
-      .catch(function(err) { console.warn('expenses load failed:', err); });
-
-    fetch(API_BASE + '/api/spending_actuals?user_id=' + uid + '&year=' + year)
+    // Spending actuals — separate endpoint returning { jan:N, feb:N, ... }
+    var actYear = new Date().getFullYear();
+    fetch('/api/spending_actuals?user_id=' + uid + '&year=' + actYear)
       .then(function(r) { return r.json(); })
       .then(function(obj) {
         if (obj && typeof obj === 'object' && !obj.error) {
@@ -983,6 +961,141 @@ export default function RetireStrongPlanner({ userId }) {
         }
       })
       .catch(function(err) { console.warn('spending actuals load failed:', err); });
+
+    // All domain tables in parallel
+    Promise.allSettled([
+      fetch('/api/profile?user_id='            + uid).then(function(r) { return r.json(); }),
+      fetch('/api/social_security?user_id='    + uid).then(function(r) { return r.json(); }),
+      fetch('/api/roth_plan?user_id='          + uid).then(function(r) { return r.json(); }),
+      fetch('/api/healthcare?user_id='         + uid).then(function(r) { return r.json(); }),
+      fetch('/api/returns?user_id='            + uid).then(function(r) { return r.json(); }),
+      fetch('/api/qcd_config?user_id='         + uid).then(function(r) { return r.json(); }),
+      fetch('/api/market_assumptions?user_id=' + uid).then(function(r) { return r.json(); }),
+      fetch('/api/expenses?user_id='           + uid).then(function(r) { return r.json(); }),
+    ]).then(function(results) {
+      var profileRes = results[0];
+      var ssRes      = results[1];
+      var rothRes    = results[2];
+      var healthRes  = results[3];
+      var returnsRes = results[4];
+      var qcdRes     = results[5];
+      var marketRes  = results[6];
+      var expRes     = results[7];
+
+      var inpPatch = {};
+      var rawPatch = {};
+
+      // Helper: set numeric or string values in both patches
+      function set(key, val) {
+        if (val === null || val === undefined || val === '') return;
+        inpPatch[key] = (typeof val === 'number') ? val : (isNaN(parseFloat(val)) ? val : parseFloat(val));
+        rawPatch[key] = String(val);
+      }
+
+      // Profile — single object
+      if (profileRes.status === 'fulfilled' && profileRes.value && !profileRes.value.error) {
+        var p = profileRes.value;
+        set('lifeExpectancy',  p.life_expectancy);
+        set('monthlyExpenses', p.monthly_spending);
+        set('stateTaxRate',    p.state_tax_rate);
+        // DB stores 'mfj', app uses 'married'
+        if (p.filing_status) {
+          var fs = p.filing_status === 'mfj' ? 'married' : 'single';
+          inpPatch.filingStatus = fs; rawPatch.filingStatus = fs;
+        }
+        if (p.survivor_mode !== undefined) {
+          inpPatch.survivorMode = p.survivor_mode ? 1 : 0;
+          rawPatch.survivorMode = p.survivor_mode ? '1' : '0';
+        }
+      }
+
+      // Social Security — array of {person:1|2, fra_pia_monthly, claiming_age, cola_rate}
+      if (ssRes.status === 'fulfilled' && Array.isArray(ssRes.value)) {
+        var primary = ssRes.value.find(function(r) { return r.person === 1; });
+        var spouse  = ssRes.value.find(function(r) { return r.person === 2; });
+        if (primary) {
+          set('ssFRA',  primary.fra_pia_monthly);
+          set('ssAge',  primary.claiming_age);
+          set('ssCola', primary.cola_rate);
+        }
+        if (spouse) {
+          set('spouseSSAt67', spouse.fra_pia_monthly);
+          set('spouseSSAge',  spouse.claiming_age);
+        }
+      }
+
+      // Roth — array of {year, planned_amount}; years 2027-2031
+      if (rothRes.status === 'fulfilled' && Array.isArray(rothRes.value)) {
+        var rothMap = {};
+        rothRes.value.forEach(function(r) { rothMap[r.year] = r.planned_amount; });
+        set('conv2027', rothMap[2027]);
+        set('conv2028', rothMap[2028]);
+        set('conv2029', rothMap[2029]);
+        set('conv2030', rothMap[2030]);
+        set('conv2031', rothMap[2031]);
+      }
+
+      // Healthcare — 2 phases sorted by id (phase 1 = ACA Bridge, phase 2 = Medicare)
+      // DB stores healthcare_inflation as integer % (5); app uses decimal (0.05)
+      if (healthRes.status === 'fulfilled' && Array.isArray(healthRes.value)) {
+        var phases = healthRes.value.slice().sort(function(a, b) { return a.id - b.id; });
+        var ph1 = phases[0]; var ph2 = phases[1];
+        if (ph1) {
+          set('healthPhase1EndAge', ph1.age_end);
+          set('healthPhase1Annual', ph1.annual_cost);
+          if (ph1.healthcare_inflation != null) {
+            var hci = ph1.healthcare_inflation / 100;
+            inpPatch.healthInflation = hci; rawPatch.healthInflation = String(hci);
+          }
+        }
+        if (ph2) { set('healthPhase2Annual', ph2.annual_cost); }
+      }
+
+      // Returns — array keyed by asset_class
+      if (returnsRes.status === 'fulfilled' && Array.isArray(returnsRes.value)) {
+        var retMap = {};
+        returnsRes.value.forEach(function(r) { retMap[r.asset_class] = r.return_rate; });
+        set('cashReturnRate',     retMap['cash_cd']);
+        set('tipsRealReturn',     retMap['tips']);
+        set('dividendReturnRate', retMap['dividend']);
+        set('growthReturnRate',   retMap['growth']);
+        set('rothReturnRate',     retMap['roth']);
+      }
+
+      // QCD — single object
+      if (qcdRes.status === 'fulfilled' && qcdRes.value && !qcdRes.value.error) {
+        var q = qcdRes.value;
+        set('qcdAmount',   q.annual_amount);
+        set('qcdStartAge', q.start_age);
+      }
+
+      // Market assumptions — single object; capeRatio/tenYrTreasury/tipsYield
+      if (marketRes.status === 'fulfilled' && marketRes.value && !marketRes.value.error) {
+        var mkt = marketRes.value;
+        set('capeRatio',    mkt.cape_ratio);
+        set('tenYrTreasury', mkt.ten_yr_treasury);
+        set('tipsYield',    mkt.tips_yield);
+      }
+
+      // Expenses — bare array from /api/expenses
+      if (expRes.status === 'fulfilled' && Array.isArray(expRes.value)) {
+        expRes.value.forEach(function(r) {
+          var amt = parseFloat(r.monthly_amount) || 0;
+          if (r.category === 'housing')        set('housingMonthly',   amt);
+          if (r.category === 'food')           set('foodMonthly',      amt);
+          if (r.category === 'transportation') set('transportMonthly', amt);
+          if (r.category === 'travel')         set('travelMonthly',    amt);
+          if (r.category === 'other')          set('otherMonthly',     amt);
+        });
+      }
+
+      if (Object.keys(inpPatch).length > 0) {
+        setInp(function(prev) { return Object.assign({}, prev, inpPatch); });
+        setRaw(function(prev) { return Object.assign({}, prev, rawPatch); });
+      }
+    }).catch(function(err) {
+      console.warn('Plan hydration failed:', err);
+    });
   }, [authUser ? authUser.user_id : null]);
 
   // ── Editable bucket config ───────────────────────────────────────────────────
