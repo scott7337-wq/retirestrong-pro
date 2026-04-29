@@ -182,6 +182,14 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // ── Build system prompt ────────────────────────────────────────────────
+    const wsCheck = await pool.query(
+      `SELECT description FROM scenarios WHERE user_id = $1 AND is_working = true`,
+      [userId]
+    );
+    const wsNote = wsCheck.rows[0]
+      ? `\nActive working scenario: ${wsCheck.rows[0].description}`
+      : '\nNo active working scenario (base plan).';
+
     const planSummary = `
 User's retirement plan:
 - Current age: ${plan.current_age || 'unknown'}
@@ -191,7 +199,7 @@ User's retirement plan:
 - SS claim age: ${plan.ss_age || 'unknown'}
 - Filing status: ${plan.filing_status || 'married'}
 - Has spouse: ${plan.has_spouse ? 'yes' : 'no'}
-- Currently viewing: ${activeTab} tab
+- Currently viewing: ${activeTab} tab${wsNote}
 `.trim();
 
     const systemPrompt = `You are RetireStrong's AI coach — a knowledgeable retirement planning partner with full context of this user's plan.
@@ -210,7 +218,9 @@ Rules:
 - If the user asks something you can't answer from their plan, say so directly.
 - Suggest 2-3 follow-up chips at the end of responses where the conversation has obvious next moves.
 - Format chips as: [CHIPS: chip1 | chip2 | chip3] at the very end of your response.
-- Never say "Let me pull that up" or similar filler before calling a tool. Call the tool silently and respond with the result directly.`;
+- Never say "Let me pull that up" or similar filler before calling a tool. Call the tool silently and respond with the result directly.
+- When the user asks a what-if question ('what if I retire at 67', 'what if I spend $7000/month'), always call propose_change first, then immediately call run_projection to show the impact. Never answer what-if questions without calling both tools.
+- After propose_change + run_projection, end with chips offering to pin the scenario or explore further.`;
 
     // ── Tool definitions ───────────────────────────────────────────────────
     const tools = [
@@ -264,6 +274,29 @@ Rules:
           },
           required: ["concept"],
         },
+      },
+      {
+        name: "propose_change",
+        description: "Tentatively modifies the working scenario with a what-if change. Use when the user asks 'what if I [change X]?' — retire later, spend less, delay SS, etc. Creates or updates an ephemeral working scenario. Always call run_projection after propose_change to show the impact.",
+        input_schema: {
+          type: "object",
+          properties: {
+            changes: {
+              type: "object",
+              description: "Key-value pairs of plan fields to change. E.g. {retirementAge: 67} or {monthlyExpenses: 7000} or {ssAge: 70}",
+            },
+            description: {
+              type: "string",
+              description: "Human-readable description of the change. E.g. 'Retire at 67 instead of 65'",
+            },
+          },
+          required: ["changes", "description"],
+        },
+      },
+      {
+        name: "discard_working_scenario",
+        description: "Discards the current working scenario and returns to the base plan. Use when the user says 'never mind', 'go back to my base plan', or 'discard that'.",
+        input_schema: { type: "object", properties: {} },
       },
     ];
 
@@ -414,12 +447,32 @@ Rules:
       [currentSessionId]
     );
 
+    // Check if there's an active working scenario to surface in UI
+    let workingScenario = null;
+    try {
+      const wsResult = await pool.query(
+        `SELECT scenario_id, description, applied_levers, updated_at
+         FROM scenarios
+         WHERE user_id = $1 AND is_working = true`,
+        [userId]
+      );
+      if (wsResult.rows[0]) {
+        workingScenario = {
+          scenarioId: wsResult.rows[0].scenario_id,
+          description: wsResult.rows[0].description,
+          changes:     wsResult.rows[0].applied_levers || [],
+          updatedAt:   wsResult.rows[0].updated_at,
+        };
+      }
+    } catch (e) { /* non-fatal */ }
+
     res.json({
       reply: finalReply,
       chips,
       toolCallsMade,
       sessionId: currentSessionId,
       tokensUsed: totalTokens,
+      workingScenario,
     });
   } catch (err) {
     console.error('Chat endpoint error:', err);
@@ -468,8 +521,24 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
            WHERE a.user_id = $1`,
           [userId]
         );
+
+        // Check for active working scenario overrides
+        let workingOverrides = {};
+        const workingScenario = await pool.query(
+          `SELECT applied_levers FROM scenarios
+           WHERE user_id = $1 AND is_working = true`,
+          [userId]
+        );
+        if (workingScenario.rows[0]?.applied_levers?.length > 0) {
+          workingOverrides = workingScenario.rows[0].applied_levers
+            .reduce((acc, change) => Object.assign(acc, change), {});
+        }
+
+        // Merge working overrides into the plan before projection
+        const planWithOverrides = Object.assign({}, plan, workingOverrides);
+
         const result = await runProjectionForUser(
-          plan,
+          planWithOverrides,
           holdingsResult.rows,
           input.leverOverlays || [],
           input.spendingPolicy || null
@@ -562,6 +631,73 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
         input.concept?.toLowerCase().includes(k)
       ) || 'default';
       return { concept: input.concept, explanation: explanations[key] };
+    }
+
+    case 'propose_change': {
+      try {
+        const { changes, description } = input;
+
+        // Upsert the working scenario for this user
+        await pool.query(
+          `INSERT INTO scenarios
+             (user_id, name, description, is_working,
+              applied_levers, is_default, is_active)
+           VALUES ($1, 'Working', $2, true, $3::jsonb, false, true)
+           ON CONFLICT (user_id) WHERE is_working = true
+           DO UPDATE SET
+             name = 'Working',
+             description = EXCLUDED.description,
+             applied_levers = scenarios.applied_levers || $3::jsonb,
+             updated_at = now()`,
+          [userId, description, JSON.stringify([changes])]
+        );
+
+        const workingResult = await pool.query(
+          `SELECT scenario_id, description, applied_levers, updated_at
+           FROM scenarios
+           WHERE user_id = $1 AND is_working = true`,
+          [userId]
+        );
+        const working = workingResult.rows[0];
+
+        const fieldLabels = {
+          retirementAge:   'Retirement age',
+          monthlyExpenses: 'Monthly expenses',
+          ssAge:           'SS claim age',
+          spouseSSAge:     'Spouse SS claim age',
+          lifeExpectancy:  'Life expectancy',
+          partTimeIncome:  'Part-time income',
+          partTimeYears:   'Part-time years',
+        };
+
+        const diffLines = Object.entries(changes).map(([key, val]) => {
+          const label = fieldLabels[key] || key;
+          const formatted = typeof val === 'number' && key.includes('Expenses')
+            ? '$' + val.toLocaleString() + '/mo'
+            : String(val);
+          return `${label}: ${formatted}`;
+        });
+
+        return {
+          success: true,
+          scenarioId: working?.scenario_id,
+          description,
+          changesApplied: changes,
+          diffLines,
+          message: `Working scenario updated: ${description}. Call run_projection to see the impact.`,
+        };
+      } catch (err) {
+        console.error('propose_change error:', err.message);
+        return { error: 'propose_change failed: ' + err.message };
+      }
+    }
+
+    case 'discard_working_scenario': {
+      await pool.query(
+        `DELETE FROM scenarios WHERE user_id = $1 AND is_working = true`,
+        [userId]
+      );
+      return { success: true, message: 'Working scenario discarded. Back to base plan.' };
     }
 
     default:

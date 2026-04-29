@@ -143,11 +143,12 @@ export default function AIInsightsRail(props) {
   const authCtx = useAuth();
   const userId = authCtx?.user?.user_id || null;
 
-  const [messages, setMessages]       = useState([INITIAL_GREETING]);
-  const [inputText, setInputText]     = useState('');
-  const [sessionId, setSessionId]     = useState(null);
-  const [isLoading, setIsLoading]     = useState(false);
+  const [messages, setMessages]         = useState([INITIAL_GREETING]);
+  const [inputText, setInputText]       = useState('');
+  const [sessionId, setSessionId]       = useState(null);
+  const [isLoading, setIsLoading]       = useState(false);
   const [tokenWarning, setTokenWarning] = useState(false);
+  const [workingScenario, setWorkingScenario] = useState(null);
 
   const scrollRef    = useRef(null);
   const textareaRef  = useRef(null);
@@ -221,6 +222,7 @@ export default function AIInsightsRail(props) {
       }]);
 
       if (data.sessionId) setSessionId(data.sessionId);
+      setWorkingScenario(data.workingScenario || null);
       if (typeof data.tokensUsed === 'number' && data.tokensUsed > TOKEN_WARN_THRESHOLD) {
         setTokenWarning(true);
       }
@@ -240,7 +242,13 @@ export default function AIInsightsRail(props) {
     setSessionId(null);
     setTokenWarning(false);
     setInputText('');
+    setWorkingScenario(null);
   }, []);
+
+  async function discardWorkingScenario() {
+    setWorkingScenario(null);
+    await sendMessage('Discard the working scenario');
+  }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -255,7 +263,10 @@ export default function AIInsightsRail(props) {
       background: COLORS.bg, borderLeft: '1px solid ' + COLORS.border,
       height: '100vh', display: 'flex', flexDirection: 'column',
     }}>
-      <style>{`@keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }`}</style>
+      <style>{`
+        @keyframes spin { from {transform:rotate(0deg)} to {transform:rotate(360deg)} }
+        @keyframes rsPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.6; transform:scale(1.3); } }
+      `}</style>
 
       {/* Header */}
       <div style={{
@@ -271,6 +282,48 @@ export default function AIInsightsRail(props) {
           background: isLoading ? COLORS.amber : COLORS.tealMid,
         }} />
       </div>
+
+      {/* Working scenario diff strip */}
+      {workingScenario && (
+        <div style={{
+          background: '#FBF0E3',
+          borderBottom: '1px solid ' + COLORS.border,
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          fontSize: 12,
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: COLORS.amber, display: 'inline-block', flexShrink: 0,
+              animation: 'rsPulse 1.6s infinite',
+            }} />
+            <span style={{ fontWeight: 600, color: COLORS.amber, flexShrink: 0 }}>
+              What-if
+            </span>
+            <span style={{
+              color: COLORS.textSecondary, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {workingScenario.description}
+            </span>
+          </div>
+          <button
+            onClick={discardWorkingScenario}
+            style={{
+              background: 'transparent',
+              border: '1px solid ' + COLORS.border,
+              borderRadius: 4, padding: '2px 8px',
+              fontSize: 11, color: COLORS.textMuted,
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >Discard</button>
+        </div>
+      )}
 
       {/* Chat log */}
       <div ref={scrollRef} style={{
