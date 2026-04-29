@@ -1,5 +1,5 @@
 # RetireStrong Pro — Project State Briefing
-## Updated April 29, 2026 — 30 commits from baseline
+## Updated April 29, 2026 — 32 commits from baseline
 
 ---
 
@@ -87,10 +87,22 @@ Directory: ~/retirestrong-pro
 - DELETE /api/scenarios/working + POST /api/scenarios/pin endpoints
 - CSS grid layout with 200ms transition on mode switch
 
-### Brief 11 — pin_scenario tool + named scenario tabs (NEXT)
-- AI can call pin_scenario tool directly from chat
-- Named scenarios appear as tabs above the plan chart
-- Scenario comparison (Phase B.2) entry point
+### Brief 10 — Phase B Coach tab (COMPLETE)
+- Coach tab added to PLANNING nav (under Stress Test)
+- Full-page two-pane layout: chat left (420px),
+  plan summary right
+- TopBar with mode toggle, DiffStrip, PinModal all
+  live inside CoachTab
+- useChatSession hook shared between rail and CoachTab
+- 3-column layout restored on all other tabs
+- Right rail back at 300px on non-Coach tabs
+- AppShell: [Sidebar | Main | Rail] order correct
+
+### Brief 11 — Coach tab plan pane + named scenario tabs (NEXT)
+- Right pane of Coach tab shows real KPIs from engine
+- Named scenarios appear as tabs (Base, Working, pinned)
+- "View in Plan tab" button navigates to Plan tab
+- Scenario comparison entry point (Phase B.2)
 
 ---
 
