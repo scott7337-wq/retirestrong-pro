@@ -1,20 +1,6 @@
 import React from 'react';
 import { getRMDStartAge } from '../../engine/constants.js';
 
-var TEAL = '#0A4D54';
-
-function impactBorderColor(impact) {
-  if (impact === 'high')   return '#0F766E';
-  if (impact === 'medium') return '#4A9E8E';
-  return '#E8E5E0';
-}
-
-function impactDotColor(impact) {
-  if (impact === 'high')   return '#0F766E';
-  if (impact === 'medium') return '#4A9E8E';
-  return '#D1D5DB';
-}
-
 function computeLevers(inp, inpWithAssets, successRate, cashFlow) {
   var sr = parseFloat(successRate) || 0;
   var curYear = 2026;
@@ -159,17 +145,16 @@ export default function LeverStrip({ inp, inpWithAssets, successRate, cashFlow, 
 
   return (
     <div>
-      <div style={{
-        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.08em', color: '#9CA3AF',
-        marginBottom: 8, paddingTop: 4,
-      }}>
-        Top Levers to Improve Your Plan
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>Levers to Improve Your Plan</div>
+        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>
+          Use these strategies to increase your success rate and extend portfolio longevity
+        </div>
       </div>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: 10,
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 12,
       }}>
         {levers.map(function(lv) {
           return (
@@ -182,65 +167,49 @@ export default function LeverStrip({ inp, inpWithAssets, successRate, cashFlow, 
 }
 
 function LeverCard({ lv, onNavigateCoach }) {
-  var [hovered, setHovered] = React.useState(false);
-  var borderColor = impactBorderColor(lv.impact);
-  var dotColor    = impactDotColor(lv.impact);
-
   return (
     <div style={{
       background: '#FFFFFF',
-      border: lv.impact === 'high' ? '1px solid ' + borderColor : '1px solid #E8E5E0',
-      borderTop: '3px solid ' + borderColor,
-      borderRadius: 10,
-      padding: 14,
+      border: '1px solid #E5E7EB',
+      borderRadius: '8px',
+      padding: '16px 20px',
       boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
       display: 'flex',
       flexDirection: 'column',
-      gap: 8,
     }}>
-      {/* Header: icon + impact dot */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: 16, lineHeight: 1 }}>{lv.icon}</div>
-        <div style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: dotColor, flexShrink: 0, marginTop: 2,
-        }} />
-      </div>
+      {/* Icon */}
+      <div style={{ fontSize: 18, marginBottom: 8 }}>{lv.icon}</div>
 
       {/* Title */}
-      <div style={{
-        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.06em', color: '#1A1A1A', lineHeight: 1.2,
-      }}>{lv.title}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{lv.title}</div>
 
       {/* Description */}
+      <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5, marginBottom: 10, flex: 1 }}>{lv.description}</div>
+
+      {/* Impact text */}
       <div style={{
-        fontSize: 12, color: '#6B7280', lineHeight: 1.5, flex: 1,
-      }}>{lv.description}</div>
+        fontSize: 12, fontWeight: 500, marginBottom: 12,
+        color: lv.impact === 'high' ? '#DC2626' : '#6B7280',
+      }}>
+        {lv.impact === 'high' ? '↑ High impact' : '→ Medium impact'}
+      </div>
 
       {/* Action button */}
       <button
         onClick={function() { onNavigateCoach(lv.action); }}
-        onMouseEnter={function(e) {
-          e.currentTarget.style.background = TEAL;
-          e.currentTarget.style.color = '#FFFFFF';
-        }}
-        onMouseLeave={function(e) {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = TEAL;
-        }}
+        onMouseEnter={function(e) { e.currentTarget.style.background = '#F9FAFB'; }}
+        onMouseLeave={function(e) { e.currentTarget.style.background = 'transparent'; }}
         style={{
           background: 'transparent',
-          color: TEAL,
-          border: '1px solid ' + TEAL,
-          borderRadius: 6,
-          padding: '5px 8px',
-          fontSize: 11,
-          fontWeight: 600,
+          border: '1px solid #D1D5DB',
+          borderRadius: '6px',
+          padding: '6px 14px',
+          fontSize: 13,
+          color: '#374151',
           cursor: 'pointer',
-          textAlign: 'center',
+          fontFamily: 'inherit',
           width: '100%',
-          transition: 'all 140ms ease',
+          textAlign: 'center',
         }}
       >{lv.actionLabel} →</button>
     </div>

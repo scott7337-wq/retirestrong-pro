@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TrendingUp, Calendar, Shield, Clock, DollarSign, ShieldAlert } from 'lucide-react';
 import SmartAlert from './SmartAlert.jsx';
 import StatusPill from './StatusPill.jsx';
+import LeverStrip from './LeverStrip.jsx';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -18,21 +19,6 @@ var CARD = {
 };
 
 // ── Static data ──────────────────────────────────────────────────────────────
-var LEVERS = [
-  {
-    id: 'spending', icon: '💰', title: 'Spending Level', tab: 'spending', impact: 'high',
-    description: 'Your withdrawal rate is the single biggest lever in your control. Even $500/mo less meaningfully improves success rate.',
-  },
-  {
-    id: 'roth', icon: '📊', title: 'Roth Conversions', tab: 'roth', impact: 'high',
-    description: 'Convert IRA to Roth before RMDs begin. Fill lower tax brackets and reduce future Medicare IRMAA surcharges.',
-  },
-  {
-    id: 'ss', icon: '🏛️', title: 'SS Timing', tab: 'ss', impact: 'medium',
-    description: 'Delaying Social Security to age 70 maximizes your benefit and reduces early portfolio draw — strong SORR protection.',
-  },
-];
-
 var WHAT_IF = [
   { id: 'ss70',         label: 'What if I delay Social Security to 70?',  tabTarget: 'ss'       },
   { id: 'reduce_spend', label: 'What if I reduce spending by $10K/year?', tabTarget: 'spending' },
@@ -260,34 +246,7 @@ export default function OverviewPage({
 
       {/* 3 — Levers Section */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>Levers to Improve Your Plan</div>
-          <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Key actions to strengthen your retirement outcome</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {LEVERS.map(function(lv) {
-            return (
-              <div key={lv.id} style={Object.assign({}, CARD, { display: 'flex', flexDirection: 'column' })}>
-                <div style={{ fontSize: 20, marginBottom: 10 }}>{lv.icon}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{lv.title}</div>
-                <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5, marginBottom: 10, flex: 1 }}>{lv.description}</div>
-                <div style={{ fontSize: 12, color: lv.impact === 'high' ? '#DC2626' : '#6B7280', fontWeight: 500, marginBottom: 12 }}>
-                  {lv.impact === 'high' ? '↑ High impact' : '↗ Medium impact'}
-                </div>
-                <button
-                  onClick={function() { setActiveTab(lv.tab); }}
-                  onMouseEnter={function(e) { e.currentTarget.style.background = '#F9FAFB'; }}
-                  onMouseLeave={function(e) { e.currentTarget.style.background = 'transparent'; }}
-                  style={{
-                    background: 'transparent', border: '1px solid #D1D5DB',
-                    borderRadius: '6px', padding: '6px 16px',
-                    fontSize: 13, color: '#374151', cursor: 'pointer', width: '100%',
-                  }}
-                >Explore →</button>
-              </div>
-            );
-          })}
-        </div>
+        <LeverStrip inp={inp} inpWithAssets={inpWithAssets} successRate={successRate} cashFlow={cashFlow} setActiveTab={setActiveTab} />
       </div>
 
       {/* 4 — Quick What-If */}

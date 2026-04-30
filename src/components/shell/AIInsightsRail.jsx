@@ -93,35 +93,67 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
   const yr0         = cf[0] || {};
 
   switch (activeTab) {
-    case 'dashboard': return {
-      cards: [
-        {
-          title: 'Plan Health', cardType: 'status',
-          items: [
-            { text: successRate + '% success rate (500 MC runs)', highlight: true, dot: true, dotColor: srColor },
-            { text: totalPort ? fmt(totalPort) + ' total portfolio' : 'Portfolio loaded', dot: true },
-            firstGap
-              ? { text: 'First income gap at age ' + firstGap.age, dot: true, dotColor: '#D97706' }
-              : { text: 'No income gaps projected', dot: true, dotColor: '#10B981' },
-          ],
-        },
-        {
-          title: 'This Year', cardType: 'action',
-          items: [
-            { text: 'Monthly expenses: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo' },
-            { text: yr0.rothConv ? 'Roth conversion: ' + fmt(yr0.rothConv) : 'No Roth conversion planned yet' },
-            { text: 'IRMAA headroom available — check Income & Tax tab' },
-          ],
-          action: 'Ask about IRMAA headroom',
-          onAction: () => navigateCoach('What is my IRMAA headroom this year?'),
-        },
-      ],
-      quickLinks: [
-        { text: 'What\'s my biggest risk right now?',  question: 'What is the single biggest risk to my retirement plan right now?' },
-        { text: 'Model a spending change',             question: 'What happens if I reduce monthly spending by $500? Show the impact on success rate and portfolio longevity.' },
-        { text: 'Run a stress test',                   question: 'Run a "bad first five years" stress test on my plan and show how the bucket strategy helps.' },
-      ],
-    };
+    case 'dashboard': {
+      const buckets = ctx?.buckets || [];
+      const b1 = buckets[0] || {};
+      const annualExp = (inp.monthlyExpenses || 0) * 12;
+      const b1CovYears = annualExp > 0 && b1.current ? b1.current / annualExp : null;
+      const hasBucketRisk = b1CovYears !== null && b1CovYears < 2.0;
+
+      const criticalRiskText = successRate < 70
+        ? 'Success rate below 70% — spending may be too high relative to portfolio. Consider a $500/mo spending reduction.'
+        : hasBucketRisk
+        ? 'Bucket 1 cash runway is ' + b1CovYears.toFixed(1) + ' years — below the 2-year minimum. Sequence risk is elevated.'
+        : 'IRMAA watch: keep 2026 income under $206K to avoid Medicare surcharges starting 2028.';
+
+      return {
+        cards: [
+          {
+            title: 'Plan Status', cardType: 'status',
+            items: [
+              { text: successRate + '% success rate (500 MC runs)', highlight: true, dot: true, dotColor: srColor },
+              { text: totalPort ? fmt(totalPort) + ' total portfolio' : 'Portfolio loaded', dot: true },
+              firstGap
+                ? { text: 'First income gap at age ' + firstGap.age, dot: true, dotColor: '#D97706' }
+                : { text: 'No income gaps projected', dot: true, dotColor: '#10B981' },
+            ],
+          },
+          {
+            title: 'Critical Risk', cardType: 'risk',
+            items: [
+              { text: criticalRiskText },
+            ],
+            action: successRate < 70 ? 'Model a spending cut' : hasBucketRisk ? 'Refill cash bucket before year-end' : 'Review IRMAA headroom',
+            onAction: successRate < 70
+              ? () => navigateCoach('What happens if I reduce spending by $500/month? Show the impact on success rate.')
+              : hasBucketRisk
+              ? () => navigateCoach('How do I refill Bucket 1 before year-end and avoid sequence-of-returns risk?')
+              : () => navigateCoach('What is my IRMAA headroom this year?'),
+          },
+          {
+            title: 'Next Action', cardType: 'action',
+            items: [
+              { text: yr0.rothConv ? 'Execute Roth conversion of ' + fmt(yr0.rothConv) + ' — window is open' : 'Review Roth conversion headroom before year-end' },
+              { text: hasBucketRisk ? 'Refill Bucket 1 — current runway below 2-year target' : 'Confirm Bucket 1 cash runway covers 2+ years of spending' },
+              { text: 'Review IRMAA headroom in Income & Tax tab' },
+            ],
+          },
+          {
+            title: 'Other Opportunities', cardType: 'default',
+            items: [
+              { text: 'Model SS timing impact — delay to 70 adds ~8%/yr', dot: true },
+              { text: 'Withdrawal sequencing: taxable → IRA → Roth saves taxes', dot: true },
+              { text: 'Smile-shaped spending reduces early portfolio draw', dot: true },
+            ],
+          },
+        ],
+        quickLinks: [
+          { text: 'What\'s my biggest risk right now?', question: 'What is the single biggest risk to my retirement plan right now?' },
+          { text: 'Model a spending change',            question: 'What happens if I reduce monthly spending by $500? Show the impact on success rate and portfolio longevity.' },
+          { text: 'Run a stress test',                  question: 'Run a "bad first five years" stress test on my plan and show how the bucket strategy helps.' },
+        ],
+      };
+    }
 
     case 'buckets': return {
       cards: [
