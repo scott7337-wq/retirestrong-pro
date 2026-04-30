@@ -57,12 +57,16 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
         <AreaChart data={data} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
           <defs>
             <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.15} />
+              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.25} />
               <stop offset="95%" stopColor={TEAL_DARK} stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="iraGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.12} />
+              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.20} />
               <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="rothGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={TEAL_MID} stopOpacity={0.18} />
+              <stop offset="95%" stopColor={TEAL_MID} stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
@@ -79,11 +83,11 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             contentStyle={{ fontSize: 11, border: '1px solid ' + BORDER, borderRadius: 6 }}
           />
           <Area type="monotone" dataKey="total" stroke={TEAL_DARK} strokeWidth={2.5}
-            fill="url(#totalGrad)" dot={false} activeDot={{ r: 4 }} />
+            fill="url(#totalGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4 }} />
           <Area type="monotone" dataKey="ira" stroke={GREEN} strokeWidth={1.5}
-            strokeDasharray="4 2" fill="url(#iraGrad)" dot={false} activeDot={{ r: 3 }} />
+            fill="url(#iraGrad)" fillOpacity={1} dot={false} activeDot={{ r: 3 }} />
           <Area type="monotone" dataKey="roth" stroke={TEAL_MID} strokeWidth={1.5}
-            strokeDasharray="2 3" fill="none" dot={false} activeDot={{ r: 3 }} />
+            fill="url(#rothGrad)" fillOpacity={1} dot={false} activeDot={{ r: 3 }} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -100,8 +104,8 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
         <div style={{ display: 'flex', gap: 14 }}>
           {[
             { color: TEAL_DARK, label: 'Total', dash: false },
-            { color: GREEN,     label: 'IRA',   dash: true },
-            { color: TEAL_MID,  label: 'Roth',  dash: true },
+            { color: GREEN,     label: 'IRA',   dash: false },
+            { color: TEAL_MID,  label: 'Roth',  dash: false },
           ].map(function(l) {
             return (
               <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

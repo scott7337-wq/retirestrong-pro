@@ -87,7 +87,7 @@ export default function MonteCarloTab({ ctx }) {
         <ResponsiveContainer width="100%" height={280}>
           <AreaChart data={pctData} margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
             <defs>
-              {[['gp90','#0A4D54'],['gp75','#3D6337'],['gp50','#4A9E8E'],['gp25','#8A5515'],['gp10','#8B3528']].map(function(g) {
+              {[['gp90','#553C9A'],['gp75','#276749'],['gp50','#2B6CB0'],['gp25','#DD6B20'],['gp10','#C53030']].map(function(g) {
                 return (
                   <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={g[1]} stopOpacity={0.25}/>
@@ -101,7 +101,7 @@ export default function MonteCarloTab({ ctx }) {
             <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{ fontSize: 10, fill: '#6B7280' }}/>
             <Tooltip content={<TTip/>}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280' }}/>
-            {[['p90','#0A4D54','gp90','90th %ile'],['p75','#3D6337','gp75','75th %ile'],['p50','#4A9E8E','gp50','Median'],['p25','#8A5515','gp25','25th %ile'],['p10','#8B3528','gp10','10th %ile']].map(function(s) {
+            {[['p90','#553C9A','gp90','90th %ile'],['p75','#276749','gp75','75th %ile'],['p50','#2B6CB0','gp50','Median'],['p25','#DD6B20','gp25','25th %ile'],['p10','#C53030','gp10','10th %ile']].map(function(s) {
               return <Area key={s[0]} type="monotone" dataKey={s[0]} stroke={s[1]} fill={'url(#' + s[2] + ')'} strokeWidth={s[0] === 'p50' ? 2.5 : 1.5} name={s[3]} fillOpacity={1}/>;
             })}
           </AreaChart>

@@ -19,8 +19,8 @@ function InsightCard({ title, items, action, onAction, priority }) {
   return (
     <div style={{
       background: COLORS.cardBg,
-      border: priority ? '1px solid ' + COLORS.tealDark : '1px solid ' + COLORS.border,
-      borderTop: priority ? '3px solid ' + COLORS.tealDark : '1px solid ' + COLORS.border,
+      border: '1px solid ' + COLORS.border,
+      borderTop: priority ? '3px solid ' + COLORS.tealDark : '3px solid ' + COLORS.tealMid,
       borderRadius: 10,
       padding: '12px 14px',
       boxShadow: priority ? '0 2px 8px rgba(10,77,84,0.10)' : '0 1px 3px rgba(0,0,0,0.04)',
