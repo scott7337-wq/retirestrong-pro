@@ -13,33 +13,37 @@ import React from 'react';
  * <StatusBadge status="success|warning|danger">text</StatusBadge>
  */
 
+var BASE_SHADOW   = '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
+var STRONG_SHADOW = '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)';
+
 var ACCENT_COLORS = {
-  success: 'var(--rs-success)',
-  warning: 'var(--rs-warning)',
-  danger:  'var(--rs-danger)',
+  success: '#3D6337',
+  warning: '#8A5515',
+  danger:  '#8B3528',
   info:    '#0A4D54',
 };
 
 export function Card({ children, priority, accent, padding, style, ...props }) {
-  var borderTop = accent
-    ? '3px solid ' + (ACCENT_COLORS[accent] || accent)
+  var accentColor = accent ? (ACCENT_COLORS[accent] || accent) : null;
+  var borderTop = accentColor
+    ? '3px solid ' + accentColor
     : priority
-    ? 'var(--rs-card-priority-top)'
-    : undefined;
+    ? '3px solid #0A4D54'
+    : '1px solid #E8E4DC';
   var pd = padding === 'none'
     ? 0
     : padding === 'sm'
-    ? 'var(--rs-card-padding-sm)'
-    : 'var(--rs-card-padding)';
+    ? '14px 16px'
+    : '18px 20px';
 
   return (
     <div
       style={Object.assign({
-        background: 'var(--rs-bg-card)',
-        border: priority ? 'var(--rs-card-priority-border)' : 'var(--rs-card-border)',
+        background: '#FFFFFF',
+        border: '1px solid #E8E4DC',
         borderTop: borderTop,
-        borderRadius: 'var(--rs-card-radius)',
-        boxShadow: priority ? 'var(--rs-card-priority-shadow)' : 'var(--rs-card-shadow)',
+        borderRadius: '12px',
+        boxShadow: (accentColor || priority) ? STRONG_SHADOW : BASE_SHADOW,
         padding: pd,
       }, style || {})}
       {...props}

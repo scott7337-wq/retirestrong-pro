@@ -181,7 +181,7 @@ export default function OverviewPage({
           borderRadius: 10,
           padding: '14px 16px',
           marginBottom: 16,
-          boxShadow: 'var(--rs-shadow-md)',
+          boxShadow: '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -213,7 +213,7 @@ export default function OverviewPage({
         borderRadius: 10,
         padding: '16px 20px',
         marginBottom: 16,
-        boxShadow: 'var(--rs-shadow-sm)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
       }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
           SPENDING VS. INCOME · {cfYear}

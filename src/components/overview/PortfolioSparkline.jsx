@@ -7,6 +7,7 @@ import {
 var TEAL_DARK = '#0A4D54';
 var GREEN     = '#3D6337';
 var TEAL_MID  = '#4A9E8E';
+var PURPLE    = '#7C3AED';
 var BORDER    = '#E8E4DC';
 var MUTED     = '#9CA3AF';
 
@@ -65,8 +66,8 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
               <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="rothGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={TEAL_MID} stopOpacity={0.18} />
-              <stop offset="95%" stopColor={TEAL_MID} stopOpacity={0.02} />
+              <stop offset="5%"  stopColor={PURPLE} stopOpacity={0.15} />
+              <stop offset="95%" stopColor={PURPLE} stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
@@ -86,8 +87,8 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             fill="url(#totalGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4 }} />
           <Area type="monotone" dataKey="ira" stroke={GREEN} strokeWidth={1.5}
             fill="url(#iraGrad)" fillOpacity={1} dot={false} activeDot={{ r: 3 }} />
-          <Area type="monotone" dataKey="roth" stroke={TEAL_MID} strokeWidth={1.5}
-            fill="url(#rothGrad)" fillOpacity={1} dot={false} activeDot={{ r: 3 }} />
+          <Area type="monotone" dataKey="roth" stroke={PURPLE} strokeWidth={1.5}
+            strokeDasharray="4 3" fill="none" dot={false} activeDot={{ r: 3 }} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -105,7 +106,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
           {[
             { color: TEAL_DARK, label: 'Total', dash: false },
             { color: GREEN,     label: 'IRA',   dash: false },
-            { color: TEAL_MID,  label: 'Roth',  dash: false },
+            { color: PURPLE,    label: 'Roth',  dash: true  },
           ].map(function(l) {
             return (
               <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
