@@ -3,6 +3,25 @@ import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useChatSession } from '../../hooks/useChatSession.js';
 
+function renderMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^\|[-| :]+\|$/gm, '')
+    .replace(/^\|(.+)\|$/gm, function(match) {
+      var cells = match.split('|').filter(function(c) { return c.trim() !== ''; });
+      return '<tr>' + cells.map(function(c) {
+        return '<td style="padding:4px 8px;border:1px solid #E8E4DC;text-align:left">' + c.trim() + '</td>';
+      }).join('') + '</tr>';
+    })
+    .replace(/(<tr>[\s\S]*?<\/tr>\n?)+/g, function(m) {
+      return '<table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0">' + m + '</table>';
+    })
+    .replace(/^- (.*)/gm, '<div style="display:flex;gap:6px;margin:3px 0"><span>•</span><span>$1</span></div>')
+    .replace(/\n\n/g, '</p><p style="margin:8px 0">')
+    .replace(/\n/g, '<br/>');
+}
+
 // Token values (matching tokens.css). Hardcoded to keep the rail self-contained.
 const COLORS = {
   bg:           '#F5F3EF',
@@ -70,10 +89,11 @@ function ChatMessage({ msg, onChipClick }) {
           padding: '8px 10px',
           fontSize: 13,
           lineHeight: 1.5,
-          whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           textAlign: 'left',
-        }}>{msg.content}</div>
+        }}
+        {...(!isUser ? { dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } } : {})}
+        >{isUser ? msg.content : null}</div>
 
         {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && (
           <ToolCallsRow toolCalls={msg.toolCalls} />
@@ -347,7 +367,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'This Year',
         items: [
-          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 0) },
+          { text: 'Monthly expenses: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo' },
           { text: yr0.rothConv ? 'Roth conversion: ' + fmt(yr0.rothConv) : 'No Roth conversion planned yet' },
           { text: 'IRMAA headroom available — check Income & Tax tab' },
         ],
@@ -431,7 +451,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'Spending Health', priority: true,
         items: [
-          { text: 'Budget: ' + fmt(inp.monthlyExpenses || 0) + '/mo', highlight: true, dot: true },
+          { text: 'Budget: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo', highlight: true, dot: true },
           { text: 'Essential expenses should match guaranteed income' },
           { text: 'Discretionary is your main adjustment lever' },
         ],
@@ -494,7 +514,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'Key Assumptions', priority: true,
         items: [
-          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 0) + ' — drives all projections', highlight: true, dot: true },
+          { text: 'Monthly expenses: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo — drives all projections', highlight: true, dot: true },
           { text: 'Inflation: 3.0% (conservative)', dot: true },
           { text: 'CAPE-based return estimates applied', dot: true },
         ],

@@ -2,6 +2,33 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+function renderMarkdown(text) {
+  if (!text) return '';
+  var html = text
+    // Bold: **text** → <strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Tables: detect header separator rows (e.g. |---|---| )
+    .replace(/^\|[-| :]+\|$/gm, '')
+    // Table rows: | cell | cell | → <tr><td>...</td></tr>
+    .replace(/^\|(.+)\|$/gm, function(match) {
+      var cells = match.split('|').filter(function(c) { return c.trim() !== ''; });
+      return '<tr>' + cells.map(function(c) {
+        return '<td style="padding:4px 8px;border:1px solid #E8E4DC;text-align:left">' + c.trim() + '</td>';
+      }).join('') + '</tr>';
+    })
+    // Wrap consecutive <tr> in <table>
+    .replace(/(<tr>[\s\S]*?<\/tr>\n?)+/g, function(m) {
+      return '<table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0">' + m + '</table>';
+    })
+    // Bullet: "- text"
+    .replace(/^- (.*)/gm, '<div style="display:flex;gap:6px;margin:3px 0"><span>•</span><span>$1</span></div>')
+    // Double newline → paragraph break
+    .replace(/\n\n/g, '</p><p style="margin:8px 0">')
+    // Single newline → <br>
+    .replace(/\n/g, '<br/>');
+  return html;
+}
+
 function successRateColor(rate) {
   if (rate >= 85) return 'var(--rs-green, #3D6337)';
   if (rate >= 70) return 'var(--rs-amber, #D97706)';
@@ -85,9 +112,10 @@ function ChatMessage({ msg, onChipClick }) {
           padding: '10px 14px',
           fontSize: 14,
           lineHeight: 1.6,
-          whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
-        }}>{msg.content}</div>
+        }}
+        {...(!isUser ? { dangerouslySetInnerHTML: { __html: renderMarkdown(msg.content) } } : {})}
+        >{isUser ? msg.content : null}</div>
 
         {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && (
           <ToolCallsRow toolCalls={msg.toolCalls} />
