@@ -1,94 +1,112 @@
 import React from 'react';
 
-// Token values matching tokens.css
-const COLORS = {
-  bg:            '#F5F3EF',
-  border:        '#E8E4DC',
-  cardBg:        '#FFFFFF',
-  tealDark:      '#0A4D54',
-  tealMid:       '#4A9E8E',
-  tealLight:     '#E8F5F2',
-  textPrimary:   '#1A1A1A',
-  textSecondary: '#6B7280',
-  textMuted:     '#9CA3AF',
-  amber:         '#D97706',
+// ── Card type → icon + color ──────────────────────────────────────────────────
+var CARD_TYPES = {
+  status:  { icon: 'ℹ',  color: '#3B82F6' },
+  risk:    { icon: '⚠',  color: '#EF4444' },
+  action:  { icon: '✓',  color: '#10B981' },
+  default: { icon: '↗',  color: '#6B7280' },
 };
 
 // ── InsightCard ──────────────────────────────────────────────────────────────
-function InsightCard({ title, items, action, onAction, priority }) {
+function InsightCard({ title, items, action, onAction, cardType }) {
+  var t = CARD_TYPES[cardType] || CARD_TYPES.default;
+  var isAction = cardType === 'action';
+  var isRisk   = cardType === 'risk';
+
   return (
     <div style={{
-      background: COLORS.cardBg,
-      border: '1px solid ' + COLORS.border,
-      borderTop: priority ? '3px solid ' + COLORS.tealDark : '3px solid ' + COLORS.tealMid,
-      borderRadius: 10,
-      padding: '12px 14px',
-      boxShadow: priority ? '0 2px 8px rgba(10,77,84,0.10)' : '0 1px 3px rgba(0,0,0,0.04)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 8,
+      background: '#FFFFFF',
+      border: '1px solid #E5E7EB',
+      borderRadius: '8px',
+      padding: '16px',
     }}>
-      <div style={{
-        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '0.06em', color: COLORS.tealDark,
-      }}>{title}</div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {items.map((item, i) => (
-          <li key={i} style={{
-            fontSize: 12.5,
-            color: item.highlight ? COLORS.textPrimary : COLORS.textSecondary,
-            fontWeight: item.highlight ? 600 : 400,
-            lineHeight: 1.5,
-            display: 'flex', gap: 6, alignItems: 'flex-start',
-          }}>
-            {item.dot && (
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: item.dotColor || COLORS.tealMid,
-                flexShrink: 0, marginTop: 6,
-              }} />
-            )}
-            <span>{item.text}</span>
-          </li>
-        ))}
-      </ul>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 15, color: t.color, fontWeight: 700, lineHeight: 1 }}>{t.icon}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{title}</span>
+      </div>
+
+      {/* Items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map(function(item, i) {
+          if (isAction) {
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{
+                  width: 20, height: 20, minWidth: 20, borderRadius: '50%',
+                  background: '#111827', color: '#FFFFFF',
+                  fontSize: 11, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>{i + 1}</div>
+                <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{item.text}</span>
+              </div>
+            );
+          }
+          return (
+            <div key={i} style={{
+              display: 'flex', gap: 6, alignItems: 'flex-start',
+              fontSize: 13,
+              color: item.highlight ? '#111827' : '#374151',
+              fontWeight: item.highlight ? 600 : 400,
+              lineHeight: 1.5,
+            }}>
+              {item.dot && (
+                <span style={{ color: item.dotColor || t.color, flexShrink: 0, marginTop: 1 }}>•</span>
+              )}
+              <span>{item.text}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Action */}
       {action && onAction && (
-        <button onClick={onAction} style={{
-          background: COLORS.tealDark, color: 'white', border: 'none',
-          borderRadius: 7, padding: '8px 12px', fontSize: 12, fontWeight: 600,
-          cursor: 'pointer', textAlign: 'left', marginTop: 2,
-        }}>{action} →</button>
+        isRisk ? (
+          <button onClick={onAction} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#EF4444', fontSize: 13, padding: '8px 0 0',
+            textAlign: 'left', display: 'block',
+          }}>→ {action}</button>
+        ) : (
+          <button onClick={onAction} style={{
+            background: 'none', border: '1px solid #D1D5DB', borderRadius: 6,
+            padding: '6px 12px', fontSize: 12, color: '#374151',
+            cursor: 'pointer', marginTop: 8,
+          }}>{action} →</button>
+        )
       )}
     </div>
   );
 }
 
-// ── Tab-specific content ─────────────────────────────────────────────────────
+// ── Tab-specific content ──────────────────────────────────────────────────────
 function buildRailContent(activeTab, ctx, navigateCoach) {
-  const cf   = ctx?.cashFlow || [];
-  const inp  = ctx?.inp || {};
-  const fmt  = ctx?.fmtC || (v => '$' + Math.round(v).toLocaleString());
+  const cf          = ctx?.cashFlow || [];
+  const inp         = ctx?.inp || {};
+  const fmt         = ctx?.fmtC || (v => '$' + Math.round(v).toLocaleString());
   const successRate = ctx?.successRate || 0;
   const totalPort   = ctx?.totalPort   || 0;
-  const srColor = successRate >= 85 ? '#3D6337' : successRate >= 70 ? '#D97706' : '#8B3528';
-  const firstGap = cf.find(r => (r.gap || 0) > 0);
-  const yr0 = cf[0] || {};
+  const srColor     = successRate >= 85 ? '#10B981' : successRate >= 70 ? '#D97706' : '#EF4444';
+  const firstGap    = cf.find(r => (r.gap || 0) > 0);
+  const yr0         = cf[0] || {};
 
   switch (activeTab) {
     case 'dashboard': return {
       cards: [
         {
-          title: 'Plan Health', priority: true,
+          title: 'Plan Health', cardType: 'status',
           items: [
             { text: successRate + '% success rate (500 MC runs)', highlight: true, dot: true, dotColor: srColor },
             { text: totalPort ? fmt(totalPort) + ' total portfolio' : 'Portfolio loaded', dot: true },
             firstGap
               ? { text: 'First income gap at age ' + firstGap.age, dot: true, dotColor: '#D97706' }
-              : { text: 'No income gaps projected', dot: true, dotColor: '#3D6337' },
+              : { text: 'No income gaps projected', dot: true, dotColor: '#10B981' },
           ],
         },
         {
-          title: 'This Year',
+          title: 'This Year', cardType: 'action',
           items: [
             { text: 'Monthly expenses: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo' },
             { text: yr0.rothConv ? 'Roth conversion: ' + fmt(yr0.rothConv) : 'No Roth conversion planned yet' },
@@ -99,16 +117,16 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'What\'s my biggest risk right now?', question: 'What is the single biggest risk to my retirement plan right now?' },
-        { text: 'Model a spending change', question: 'What happens if I reduce monthly spending by $500? Show the impact on success rate and portfolio longevity.' },
-        { text: 'Run a stress test', question: 'Run a "bad first five years" stress test on my plan and show how the bucket strategy helps.' },
+        { text: 'What\'s my biggest risk right now?',  question: 'What is the single biggest risk to my retirement plan right now?' },
+        { text: 'Model a spending change',             question: 'What happens if I reduce monthly spending by $500? Show the impact on success rate and portfolio longevity.' },
+        { text: 'Run a stress test',                   question: 'Run a "bad first five years" stress test on my plan and show how the bucket strategy helps.' },
       ],
     };
 
     case 'buckets': return {
       cards: [
         {
-          title: 'Bucket Status', priority: true,
+          title: 'Bucket Status', cardType: 'status',
           items: [
             { text: 'Bucket 1 (Cash): Review runway above', dot: true },
             { text: 'Bucket 2 (Bonds/TIPS): Intermediate buffer', dot: true },
@@ -116,7 +134,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           ],
         },
         {
-          title: 'Sequence Risk',
+          title: 'Sequence Risk', cardType: 'default',
           items: [
             { text: '2–3 years cash in B1 protects against early downturns' },
             { text: 'Refill B1 from dividends in good years' },
@@ -127,8 +145,8 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'How much cash should I hold?', question: 'How much should I keep in Bucket 1 (cash) given my monthly expenses and risk tolerance?' },
-        { text: 'When should I refill Bucket 1?', question: 'When and how should I refill Bucket 1? What triggers should I use?' },
+        { text: 'How much cash should I hold?',    question: 'How much should I keep in Bucket 1 (cash) given my monthly expenses and risk tolerance?' },
+        { text: 'When should I refill Bucket 1?',  question: 'When and how should I refill Bucket 1? What triggers should I use?' },
         { text: 'Explain sequence-of-returns risk', question: 'Explain sequence-of-returns risk and how the bucket strategy protects me from it.' },
       ],
     };
@@ -138,20 +156,20 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
       return {
         cards: [
           {
-            title: 'Cash Flow', priority: true,
+            title: 'Cash Flow', cardType: 'status',
             items: [
               {
                 text: firstGap
                   ? 'Income gap starts at age ' + firstGap.age + ' — ' + fmt(firstGap.gap || 0) + '/yr'
                   : 'No income gaps in projection',
-                highlight: true, dot: true, dotColor: firstGap ? '#D97706' : '#3D6337',
+                highlight: true, dot: true, dotColor: firstGap ? '#D97706' : '#10B981',
               },
               { text: gapYears.length + ' gap years total', dot: true },
               { text: 'SS income starts at age ' + (inp.ssAge || 70), dot: true },
             ],
           },
           {
-            title: 'Roth Opportunity',
+            title: 'Roth Opportunity', cardType: 'action',
             items: [
               { text: 'Convert in gap years before SS starts' },
               { text: 'Each conversion year reduces future RMDs' },
@@ -163,8 +181,8 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         ],
         quickLinks: [
           { text: 'When do income gaps start?', question: 'When do income gaps start in my plan and what is the best way to cover them?' },
-          { text: 'Optimize SS timing', question: 'How does SS timing affect my annual cash flow? Show the difference between claiming at 67 vs 70.' },
-          { text: 'Model early retirement', question: 'What happens to my cash flow if I retire 2 years earlier than planned?' },
+          { text: 'Optimize SS timing',          question: 'How does SS timing affect my annual cash flow? Show the difference between claiming at 67 vs 70.' },
+          { text: 'Model early retirement',      question: 'What happens to my cash flow if I retire 2 years earlier than planned?' },
         ],
       };
     }
@@ -172,7 +190,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
     case 'monte': return {
       cards: [
         {
-          title: 'Scenario Analysis', priority: true,
+          title: 'Scenario Analysis', cardType: 'status',
           items: [
             { text: 'Base case: ' + successRate + '% success', highlight: true, dot: true, dotColor: srColor },
             { text: 'Bad First Five Years is your key stress test', dot: true },
@@ -180,7 +198,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           ],
         },
         {
-          title: 'Key Levers',
+          title: 'Key Levers', cardType: 'action',
           items: [
             { text: 'Spending 10% less adds ~8–12% success rate' },
             { text: 'Delaying SS to 70 adds longevity protection' },
@@ -191,16 +209,16 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'What stress tests matter most?', question: 'Which stress test scenarios matter most for my specific plan? Rank them by impact.' },
+        { text: 'What stress tests matter most?',    question: 'Which stress test scenarios matter most for my specific plan? Rank them by impact.' },
         { text: 'What levers improve success rate?', question: 'What are the top 3 changes I can make to meaningfully improve my Monte Carlo success rate?' },
-        { text: 'Model a 2008-style crash', question: 'What happens to my plan if the market drops 40% in year 1 of retirement? Show the outcome with and without the bucket strategy.' },
+        { text: 'Model a 2008-style crash',          question: 'What happens to my plan if the market drops 40% in year 1 of retirement? Show the outcome with and without the bucket strategy.' },
       ],
     };
 
     case 'spending': return {
       cards: [
         {
-          title: 'Spending Health', priority: true,
+          title: 'Spending Health', cardType: 'status',
           items: [
             { text: 'Budget: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo', highlight: true, dot: true },
             { text: 'Essential expenses should match guaranteed income' },
@@ -208,7 +226,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           ],
         },
         {
-          title: 'What-If',
+          title: 'What-If', cardType: 'action',
           items: [
             { text: 'Cutting $500/mo adds roughly 2–3% success rate' },
             { text: 'Smile-shaped spending reduces early withdrawals' },
@@ -220,15 +238,15 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
       ],
       quickLinks: [
         { text: 'What\'s my safe withdrawal rate?', question: 'What is my safe withdrawal rate given my portfolio and time horizon? How does it compare to the 4% rule?' },
-        { text: 'Model smile-shaped spending', question: 'What is smile-shaped spending and how would it apply to my plan? Compare it to flat real spending.' },
-        { text: 'Which expenses are essential?', question: 'Help me categorize my expenses into essential vs discretionary and identify the best places to cut if needed.' },
+        { text: 'Model smile-shaped spending',       question: 'What is smile-shaped spending and how would it apply to my plan? Compare it to flat real spending.' },
+        { text: 'Which expenses are essential?',     question: 'Help me categorize my expenses into essential vs discretionary and identify the best places to cut if needed.' },
       ],
     };
 
     case 'incometax': return {
       cards: [
         {
-          title: 'Tax Efficiency', priority: true,
+          title: 'Tax Efficiency', cardType: 'status',
           items: [
             { text: 'IRMAA Tier 1 threshold: $212,000 MAGI', highlight: true, dot: true },
             { text: '22% bracket ceiling: ~$201,000 MFJ', dot: true },
@@ -238,7 +256,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           onAction: () => navigateCoach('What is my exact IRMAA headroom this year? How much can I convert without triggering a surcharge?'),
         },
         {
-          title: "This Year's Priority",
+          title: "This Year's Priority", cardType: 'action',
           items: [
             { text: 'Convert up to IRMAA ceiling first' },
             { text: 'IRA draws + conversions = MAGI' },
@@ -247,16 +265,16 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'What is my IRMAA headroom?', question: 'What is my IRMAA headroom this year? Give me the exact dollar amount I can convert or withdraw without hitting the next tier.' },
-        { text: 'Explain IRMAA two-year lookback', question: 'Explain how the Medicare IRMAA two-year lookback works and how to use it in planning Roth conversions.' },
-        { text: 'How much should I convert?', question: 'How much should I convert to Roth this year to stay under IRMAA Tier 1 and fill the 22% bracket?' },
+        { text: 'What is my IRMAA headroom?',          question: 'What is my IRMAA headroom this year? Give me the exact dollar amount I can convert or withdraw without hitting the next tier.' },
+        { text: 'Explain IRMAA two-year lookback',     question: 'Explain how the Medicare IRMAA two-year lookback works and how to use it in planning Roth conversions.' },
+        { text: 'How much should I convert?',          question: 'How much should I convert to Roth this year to stay under IRMAA Tier 1 and fill the 22% bracket?' },
       ],
     };
 
     case 'roth': return {
       cards: [
         {
-          title: 'Conversion Window', priority: true,
+          title: 'Conversion Window', cardType: 'status',
           items: [
             { text: 'Window closes when RMDs begin', highlight: true, dot: true },
             { text: 'Survivor tax cliff makes conversions urgent', dot: true },
@@ -266,7 +284,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           onAction: () => navigateCoach('How much should I convert to Roth each year before RMDs begin? Give me a year-by-year plan.'),
         },
         {
-          title: 'Strategy',
+          title: 'Strategy', cardType: 'action',
           items: [
             { text: 'Convert to top of 22% bracket each year' },
             { text: 'Stay under IRMAA Tier 1 ($212k MAGI)' },
@@ -275,16 +293,16 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'How much should I convert this year?', question: 'How much should I convert from IRA to Roth this year? Factor in my IRMAA headroom and bracket position.' },
+        { text: 'How much should I convert this year?',    question: 'How much should I convert from IRA to Roth this year? Factor in my IRMAA headroom and bracket position.' },
         { text: 'Should I pay taxes from IRA or taxable?', question: 'Should I pay Roth conversion taxes from my IRA or taxable account? What\'s the math?' },
-        { text: 'What is the survivor tax cliff?', question: 'Explain the survivor tax cliff and why it makes Roth conversions more urgent for married couples.' },
+        { text: 'What is the survivor tax cliff?',         question: 'Explain the survivor tax cliff and why it makes Roth conversions more urgent for married couples.' },
       ],
     };
 
     case 'settings': return {
       cards: [
         {
-          title: 'Key Assumptions', priority: true,
+          title: 'Key Assumptions', cardType: 'status',
           items: [
             { text: 'Monthly expenses: $' + (inp.monthlyExpenses || 0).toLocaleString() + '/mo — drives all projections', highlight: true, dot: true },
             { text: 'Inflation: 3.0% (conservative)', dot: true },
@@ -292,7 +310,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           ],
         },
         {
-          title: 'Sensitivity',
+          title: 'Sensitivity', cardType: 'default',
           items: [
             { text: 'Expenses have 3× the impact of return assumptions' },
             { text: 'Spending is your most controllable variable' },
@@ -302,15 +320,15 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
       ],
       quickLinks: [
         { text: 'Which assumption matters most?', question: 'Which assumption in my plan has the largest impact on success rate? Rank them by sensitivity.' },
-        { text: 'What if inflation is 4%?', question: 'What happens to my plan if inflation runs at 4% instead of 3%? Show the success rate impact.' },
-        { text: 'How sensitive am I to returns?', question: 'How sensitive is my success rate to equity returns? What if returns are 1-2% lower than expected?' },
+        { text: 'What if inflation is 4%?',        question: 'What happens to my plan if inflation runs at 4% instead of 3%? Show the success rate impact.' },
+        { text: 'How sensitive am I to returns?',  question: 'How sensitive is my success rate to equity returns? What if returns are 1-2% lower than expected?' },
       ],
     };
 
     default: return {
       cards: [
         {
-          title: 'RetireStrong', priority: true,
+          title: 'RetireStrong', cardType: 'status',
           items: [
             { text: 'Navigate to a tab to see context-aware insights', dot: true },
             { text: 'Open Coach for personalized Q&A', dot: true },
@@ -318,15 +336,15 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
         },
       ],
       quickLinks: [
-        { text: 'How healthy is my plan?', question: 'Give me a complete health check of my retirement plan. What are the top 3 things I should address?' },
+        { text: 'How healthy is my plan?',   question: 'Give me a complete health check of my retirement plan. What are the top 3 things I should address?' },
         { text: 'What should I do this year?', question: 'What are the most important financial moves I should make this year for my retirement plan?' },
-        { text: 'Ask me anything', question: null },
+        { text: 'Ask me anything',             question: null },
       ],
     };
   }
 }
 
-// ── Main rail component ──────────────────────────────────────────────────────
+// ── Main rail component ───────────────────────────────────────────────────────
 export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActiveTab }) {
   function navigateCoach(question) {
     if (question) {
@@ -342,8 +360,8 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
       width: 280,
       minWidth: 280,
       flexShrink: 0,
-      background: COLORS.bg,
-      borderLeft: '1px solid ' + COLORS.border,
+      background: '#FFFFFF',
+      borderLeft: '1px solid #E5E7EB',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
@@ -352,16 +370,23 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
       {/* Header */}
       <div style={{
         flexShrink: 0,
-        padding: '14px 16px',
-        borderBottom: '2px solid rgba(10,77,84,0.15)',
+        padding: '16px 16px 12px',
+        borderBottom: '1px solid #E5E7EB',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.tealDark }}>
-          ✦ Insights
+        <span style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+          color: '#374151', textTransform: 'uppercase',
+        }}>
+          AI INSIGHTS
         </span>
       </div>
 
       {/* Cards + quick links */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '16px 12px 8px',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}>
         {cards.map(function(card, i) {
           return (
             <InsightCard
@@ -370,14 +395,17 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
               items={card.items}
               action={card.action}
               onAction={card.onAction}
-              priority={card.priority}
+              cardType={card.cardType}
             />
           );
         })}
 
         {quickLinks.length > 0 && (
           <div style={{ marginTop: 4 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: '#9CA3AF',
+              textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6,
+            }}>
               Quick questions
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -387,14 +415,9 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
                     key={i}
                     onClick={function() { navigateCoach(lnk.question); }}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: '4px 0',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: 12,
-                      color: COLORS.tealDark,
-                      lineHeight: 1.4,
+                      background: 'none', border: 'none', padding: '4px 0',
+                      cursor: 'pointer', textAlign: 'left',
+                      fontSize: 12, color: '#0A4D54', lineHeight: 1.4,
                     }}
                   >→ {lnk.text}</button>
                 );
@@ -406,32 +429,22 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
 
       {/* Footer */}
       <div style={{
-        flexShrink: 0,
-        borderTop: '1px solid ' + COLORS.border,
-        padding: '12px',
-        background: COLORS.cardBg,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
+        flexShrink: 0, borderTop: '1px solid #E5E7EB',
+        padding: '12px', background: '#FFFFFF',
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         <button
           onClick={function() { navigateCoach(null); }}
           style={{
-            background: COLORS.tealDark,
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            width: '100%',
-            textAlign: 'center',
+            background: '#111827', color: '#FFFFFF',
+            border: 'none', borderRadius: 8,
+            padding: '10px 14px', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', width: '100%', textAlign: 'center',
           }}
         >
           Open Coach for Q&amp;A →
         </button>
-        <div style={{ fontSize: 10, color: COLORS.textMuted, textAlign: 'center', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.4 }}>
           This is education, not investment advice.
         </div>
       </div>
