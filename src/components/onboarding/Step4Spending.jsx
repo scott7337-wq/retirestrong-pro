@@ -46,7 +46,7 @@ export default function Step4Spending({ draft, onUpdate, onNext, onBack }) {
   }
 
   function handleNext() {
-    onUpdate({ monthlyExpenses: monthly || 8000 });
+    onUpdate({ monthlyExpenses: monthly || 0 });
     onNext();
   }
 

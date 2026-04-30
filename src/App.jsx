@@ -67,8 +67,8 @@ function projectForSsAge(inp, er, ssClaimAge) {
   var spouseMonthly = inp.spouseEarlyClaim ? (inp.spouseSSAt63 || 1472) : (inp.spouseSSAt67 || 1879);
   var status = resolveStatus(inp);
   var stRate = inp.stateTaxRate || 2.5;
-  var ssStartYear = (inp.birthYear || 1959) + ssClaimAge;
-  var spouseStartYear = (inp.spouseBirthYear || 1962) + spouseClaimAge;
+  var ssStartYear = (inp.birthYear || 1960) + ssClaimAge;
+  var spouseStartYear = (inp.spouseBirthYear || 1963) + spouseClaimAge;
   var data = [];
   for (var y = 0; y <= years; y++) {
     var age = inp.currentAge + y;
@@ -188,7 +188,7 @@ function projectRothBridge(inp, er) {
     if (y === 3) expenses += inp.extraSpend2028;
     // v13: SS with birth-year-based start
     var calYrBridge = 2026 + y;
-    var ssStartYear = (inp.birthYear || 1959) + ssBridgeAge;
+    var ssStartYear = (inp.birthYear || 1960) + ssBridgeAge;
     var ssInc = 0;
     if (calYrBridge === ssStartYear) ssInc = ss70Monthly * 2;
     else if (calYrBridge > ssStartYear) {
@@ -196,7 +196,7 @@ function projectRothBridge(inp, er) {
       ssInc = ss70Monthly * Math.pow(1 + ssCola, ssColaYrs) * 12;
     }
     // v13: Spouse SS with actual net figures
-    var spouseStartYear = (inp.spouseBirthYear || 1962) + spouseBridgeClaimAge;
+    var spouseStartYear = (inp.spouseBirthYear || 1963) + spouseBridgeClaimAge;
     var spSS = 0;
     if (inp.hasSpouse && !inp.survivorMode) {
       if (calYrBridge === spouseStartYear) spSS = spouseBridgeMonthly * 5;

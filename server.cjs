@@ -537,11 +537,18 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
         // Merge working overrides into the plan before projection
         const planWithOverrides = Object.assign({}, plan, workingOverrides);
 
+        const healthResult = await pool.query(
+          `SELECT phase_name, annual_cost, age_start, age_end, healthcare_inflation
+           FROM healthcare_plan WHERE user_id = $1 ORDER BY age_start ASC`,
+          [userId]
+        );
+
         const result = await runProjectionForUser(
           planWithOverrides,
           holdingsResult.rows,
           input.leverOverlays || [],
-          input.spendingPolicy || null
+          input.spendingPolicy || null,
+          healthResult.rows
         );
         return result;
       } catch (err) {
@@ -562,8 +569,13 @@ async function executeToolCall(toolName, input, plan, userId, pool) {
            WHERE a.user_id = $1`,
           [userId]
         );
+        const healthResult2 = await pool.query(
+          `SELECT phase_name, annual_cost, age_start, age_end, healthcare_inflation
+           FROM healthcare_plan WHERE user_id = $1 ORDER BY age_start ASC`,
+          [userId]
+        );
         const projection = await runProjectionForUser(
-          plan, holdingsResult.rows, [], null
+          plan, holdingsResult.rows, [], null, healthResult2.rows
         );
 
         const irmaaResult = await pool.query(

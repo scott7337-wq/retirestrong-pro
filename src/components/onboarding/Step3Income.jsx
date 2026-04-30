@@ -68,9 +68,9 @@ function ClaimAgePicker({ fraMonthly, value, onChange }) {
 }
 
 export default function Step3Income({ draft, onUpdate, onNext, onBack }) {
-  var [ssFRAMonthly, setSsFRAMonthly] = useState(draft.ssFRA || 3445);
+  var [ssFRAMonthly, setSsFRAMonthly] = useState(draft.ssFRA || 0);
   var [ssAge, setSsAge] = useState(draft.ssAge || 67);
-  var [spouseFRA, setSpouseFRA] = useState(draft.spouseSSAt67 || 1879);
+  var [spouseFRA, setSpouseFRA] = useState(draft.spouseSSAt67 || 0);
   var [spouseAge, setSpouseAge] = useState(draft.spouseSSAge || 67);
 
   var [rawFRA, setRawFRA] = useState(ssFRAMonthly > 0 ? String(ssFRAMonthly) : '');
@@ -87,12 +87,11 @@ export default function Step3Income({ draft, onUpdate, onNext, onBack }) {
   }
 
   function handleSkip() {
-    // Uses canonical defaults from INITIAL_DRAFT: $3,445/mo at FRA (median 2024 SS benefit).
-    // Update these in OnboardingWizard.jsx WIZARD_DEFAULTS when ssa.gov medians change.
+    // Skip leaves SS as 0 — user can update in Assumptions tab after onboarding.
     onUpdate({
-      ssFRA: draft.ssFRA || 3445,
+      ssFRA: draft.ssFRA || 0,
       ssAge: draft.ssAge || 67,
-      spouseSSAt67: draft.hasSpouse ? (draft.spouseSSAt67 || 1879) : undefined,
+      spouseSSAt67: draft.hasSpouse ? (draft.spouseSSAt67 || 0) : undefined,
       spouseSSAge: draft.hasSpouse ? (draft.spouseSSAge || 67) : undefined,
     });
     onNext();

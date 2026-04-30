@@ -9,14 +9,13 @@ import Step5Results from './Step5Results.jsx';
 var TOTAL_STEPS = 5;
 
 // Canonical wizard defaults — keep in sync with WIZARD_DEFAULTS in App.jsx.
-// These are the values used when the user skips a step or leaves a field blank.
-// ssFRA: median SS benefit at FRA (ssa.gov 2024). ssAge: Full Retirement Age.
+// SS and spending are blank (0) — wizard should prompt user to enter their own numbers.
 var WIZARD_DEFAULTS = {
-  ssFRA: 3445,
+  ssFRA: 0,
   ssAge: 67,
-  spouseSSAt67: 1879,
+  spouseSSAt67: 0,
   spouseSSAge: 67,
-  monthlyExpenses: 8000,
+  monthlyExpenses: 0,
 };
 
 var INITIAL_DRAFT = {
@@ -50,7 +49,7 @@ export default function OnboardingWizard({ onComplete }) {
   }
 
   function handleExplore() {
-    onComplete(Object.assign({}, draft, { monthlyExpenses: draft.monthlyExpenses || 8000 }));
+    onComplete(Object.assign({}, draft, { monthlyExpenses: draft.monthlyExpenses || 0 }));
   }
 
   return (

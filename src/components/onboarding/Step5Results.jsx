@@ -22,11 +22,11 @@ function buildWizardInp(draft) {
     currentAge: currentAge,
     hasSpouse: draft.hasSpouse || false,
     spouseBirthYear: draft.spouseBirthYear || null,
-    ssFRA: draft.ssFRA || 3445,
+    ssFRA: draft.ssFRA || 0,
     ssAge: draft.ssAge || 67,
-    spouseSSAt67: draft.spouseSSAt67 || 1879,
+    spouseSSAt67: draft.spouseSSAt67 || 0,
     spouseSSAge: draft.spouseSSAge || 67,
-    monthlyExpenses: draft.monthlyExpenses || 8000,
+    monthlyExpenses: draft.monthlyExpenses || 0,
   });
   var inpWithAssets = Object.assign({}, inp, {
     taxableBal: derivedTotals.taxable,

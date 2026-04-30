@@ -23,7 +23,7 @@ async function getEngine() {
  */
 function buildInpFromProfile(profile) {
   const currentAge = parseInt(profile.current_age) || 66;
-  const birthYear = parseInt(profile.birth_year) || 1959;
+  const birthYear = parseInt(profile.birth_year) || 1960;
   const spouseBirthYear = profile.has_spouse
     ? (2026 - (parseInt(profile.spouse_current_age) || 63))
     : null;
@@ -42,7 +42,7 @@ function buildInpFromProfile(profile) {
     lifeExpectancy: parseInt(profile.life_expectancy) || 90,
 
     // Spending
-    monthlyExpenses: parseFloat(profile.monthly_expenses) || 8000,
+    monthlyExpenses: parseFloat(profile.monthly_expenses) || 0,
 
     // Rates
     inflationRate: parseFloat(profile.inflation_rate) || 3.0,
@@ -51,21 +51,21 @@ function buildInpFromProfile(profile) {
     healthInflation: 0.05,
 
     // SS — primary
-    ssFRA: parseFloat(profile.ss_monthly) || 3445,
-    ssMonthly: parseFloat(profile.ss_monthly) || 3445,
+    ssFRA: parseFloat(profile.ss_monthly) || 2500,
+    ssMonthly: parseFloat(profile.ss_monthly) || 2500,
     ssAge: parseInt(profile.ss_age) || 70,
 
     // SS — spouse
     spouseSSAge: parseInt(profile.spouse_ss_age) || 67,
-    spouseSSMonthly: parseFloat(profile.spouse_ss_monthly) || 1879,
-    spouseSSAt67: parseFloat(profile.spouse_ss_monthly) || 1879,
-    spouseSSAt63: Math.round((parseFloat(profile.spouse_ss_monthly) || 1879) * 0.783),
+    spouseSSMonthly: parseFloat(profile.spouse_ss_monthly) || 1500,
+    spouseSSAt67: parseFloat(profile.spouse_ss_monthly) || 1500,
+    spouseSSAt63: Math.round((parseFloat(profile.spouse_ss_monthly) || 1500) * 0.783),
     spouseEarlyClaim: false,
 
-    // Healthcare
-    healthPhase1Annual: 27896,
-    healthPhase1EndAge: 68,
-    healthPhase2Annual: 14873,
+    // Healthcare — defaults; overridden by DB rows in runProjectionForUser
+    healthPhase1Annual: 24000,
+    healthPhase1EndAge: 67,
+    healthPhase2Annual: 14000,
 
     // Return rates
     cashReturnRate: 4.8,
@@ -194,13 +194,28 @@ function summarizeMC(results) {
  * Run the full projection for a user.
  * Returns cashflow rows + MC summary.
  */
-async function runProjectionForUser(profile, holdings, leverOverlays, spendingPolicy) {
+async function runProjectionForUser(profile, holdings, leverOverlays, spendingPolicy, healthcare) {
   const engine = await getEngine();
 
   const inp = buildInpFromProfile(profile);
   const balances = buildBalancesFromHoldings(holdings);
   const inpWithAssets = Object.assign({}, inp, balances);
   const derivedTotals = buildDerivedTotals(balances);
+
+  // Override healthcare values from DB rows (sorted by age_start ascending)
+  if (healthcare && healthcare.length > 0) {
+    const sorted = healthcare.slice().sort((a, b) => (a.age_start || 0) - (b.age_start || 0));
+    const ph1 = sorted[0];
+    const ph2 = sorted[1];
+    if (ph1) {
+      inpWithAssets.healthPhase1Annual = parseFloat(ph1.annual_cost) || 24000;
+      inpWithAssets.healthPhase1EndAge = ph1.age_end || 67;
+      inpWithAssets.healthInflation    = (parseFloat(ph1.healthcare_inflation) || 5.0) / 100;
+    }
+    if (ph2) {
+      inpWithAssets.healthPhase2Annual = parseFloat(ph2.annual_cost) || 14000;
+    }
+  }
 
   // er only needs inflation — engine reads return rates from inpWithAssets
   const er = engine.capeBased(inp.capeRatio, inp.tenYrTreasury, inp.tipsYield);
