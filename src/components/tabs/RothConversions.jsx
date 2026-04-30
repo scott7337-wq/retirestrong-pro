@@ -75,7 +75,7 @@ export default function RothConversionsTab({ ctx }) {
               borderTop: '3px solid ' + item.accent,
               borderRadius: '12px',
               padding: '14px 16px',
-              boxShadow: STRONG_SHADOW,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               textAlign: 'center',
             }}>
               <div style={{
