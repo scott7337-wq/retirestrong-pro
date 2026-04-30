@@ -853,6 +853,41 @@ export default function RetireStrongPlanner({ userId }) {
   // of the auth user object. No localStorage. Survives across browsers/incognito.
   var wizardDone = !!(authUser && authUser.onboarding_complete);
 
+  // ── State reset on user change ──────────────────────────────────────────────
+  // MUST be defined BEFORE the hydration useEffects so it fires first in
+  // React's effect queue when authUser.user_id changes.
+  // Prevents data bleed between sessions: Scott's data must never appear for
+  // demo users (or vice versa).
+  useEffect(function() {
+    var neutral = flattenPlan({});
+    var neutralRaw = {};
+    Object.keys(neutral).forEach(function(k) {
+      neutralRaw[k] = neutral[k] !== null && neutral[k] !== undefined ? String(neutral[k]) : '';
+    });
+    setInp(neutral);
+    setRaw(neutralRaw);
+    setAssets([]);
+    setDataSource('defaults');
+    // These setters are declared later in the function but are safe to use
+    // in effect callbacks — all useState hooks run during render before effects fire.
+    setBucketCfg(DEFAULT_BUCKET_CONFIG);
+    setScenarios([{
+      name: 'Base Case',
+      data: DEFAULTS,
+      plan: buildPlan(DEFAULTS, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, { activeScenario: 'Base Case' }),
+      assets: DEFAULT_ASSETS,
+      bucketCfg: DEFAULT_BUCKET_CONFIG,
+      date: new Date().toLocaleDateString(),
+    }]);
+    setActiveScen('Base Case');
+    setMonthlySpend({ jan:0,feb:0,mar:0,apr:0,may:0,jun:0,jul:0,aug:0,sep:0,oct:0,nov:0,dec:0 });
+    setThisYear({ incW2:0, incSeverance:0, incIRA:0, incRothConv:0, incOther:0, incDividends:0 });
+    setAiInsights(null);
+    setAiLoading(false);
+    setAiError(null);
+    setLedger([]);
+  }, [authUser ? authUser.user_id : null]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Hydrate inp from the saved wizard draft (onboarding_data) once per user.
   // Holdings are loaded separately via /api/holdings.
   useEffect(function() {
