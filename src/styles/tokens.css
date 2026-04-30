@@ -42,11 +42,42 @@
 
   /* ── Card system ── */
   --rs-card-radius:              12px;
-  --rs-card-border:              1px solid var(--rs-border);
-  --rs-card-shadow:              0 1px 4px rgba(0,0,0,0.06);
-  --rs-card-shadow-md:           0 2px 12px rgba(10,77,84,0.10);
-  --rs-card-padding:             16px 18px;
-  --rs-card-priority-border-top: 3px solid var(--rs-teal-dark);
+  --rs-card-border:              1px solid #E8E4DC;
+  --rs-card-shadow:              0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --rs-card-shadow-md:           0 4px 16px rgba(10,77,84,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --rs-card-padding:             20px 24px;
+  --rs-card-padding-sm:          14px 16px;
+  --rs-card-priority-border:     1px solid #0A4D54;
+  --rs-card-priority-shadow:     0 2px 12px rgba(10,77,84,0.12);
+  --rs-card-priority-top:        3px solid #0A4D54;
+
+  /* ── Chart colors (consistent across all charts) ── */
+  --rs-chart-total:    #0A4D54;
+  --rs-chart-ira:      #3D6337;
+  --rs-chart-roth:     #4A9E8E;
+  --rs-chart-expenses: #8B3528;
+  --rs-chart-income:   #3D6337;
+  --rs-chart-gap:      #8A5515;
+
+  /* ── Status colors ── */
+  --rs-success-bg:  #E6F1DD;
+  --rs-success:     #3D6337;
+  --rs-warning-bg:  #FEF3C7;
+  --rs-warning:     #8A5515;
+  --rs-danger-bg:   #FDE8E6;
+  --rs-danger:      #8B3528;
+  --rs-neutral-bg:  #F2F1EC;
+  --rs-neutral:     #6B7280;
+
+  /* ── Typography scale ── */
+  --rs-text-display: 28px;
+  --rs-text-title:   18px;
+  --rs-text-body:    14px;
+  --rs-text-small:   12px;
+  --rs-text-xs:      11px;
+  --rs-kpi-size:     32px;
+  --rs-kpi-weight:   700;
+  --rs-kpi-spacing:  -0.02em;
 
   /* ── Typography ── */
   --rs-font-display: 'Source Serif 4', Georgia, serif;

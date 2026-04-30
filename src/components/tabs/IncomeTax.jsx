@@ -10,7 +10,7 @@ export default function IncomeTaxTab({ ctx }) {
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
-  var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 24px', marginBottom: 16 };
+  var CARD = { background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 'var(--rs-card-padding)', marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' };
 
   return (
     <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
@@ -18,7 +18,7 @@ export default function IncomeTaxTab({ ctx }) {
       {/* Page header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>Income &amp; Tax</h1>
+          <h1 style={{ fontFamily: 'var(--rs-font-display)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--rs-text-primary)', margin: '0 0 3px' }}>Income &amp; Tax</h1>
           <p style={{ fontSize: 14, color: '#6B7280', margin: 0 }}>
             {planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           </p>

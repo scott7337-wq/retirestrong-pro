@@ -197,7 +197,7 @@ export default function DashboardTab({ ctx }) {
     return function() { if (cfChartRef.current) { cfChartRef.current.destroy(); cfChartRef.current = null; } };
   }, [cashFlow]);
 
-  var card = { background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '13px 15px' };
+  var card = { background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '13px 15px', boxShadow: 'var(--rs-card-shadow)' };
   var lbl = { fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#64748b', margin: '0 0 7px' };
 
   return (

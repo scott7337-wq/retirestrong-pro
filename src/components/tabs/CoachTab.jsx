@@ -399,9 +399,10 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
 
         {/* Success rate */}
         <div style={{
-          background: COLORS.cardBg,
-          border: '1px solid ' + COLORS.border,
-          borderRadius: 12, padding: '16px 18px',
+          background: 'var(--rs-bg-card)',
+          border: 'var(--rs-card-border)',
+          borderRadius: 'var(--rs-card-radius)', padding: '16px 18px',
+          boxShadow: 'var(--rs-card-shadow)',
         }}>
           <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
           <div style={{ fontSize: 38, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
@@ -414,10 +415,11 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
 
         {/* Key numbers */}
         <div style={{
-          background: COLORS.cardBg,
-          border: '1px solid ' + COLORS.border,
-          borderRadius: 12, padding: '14px 18px',
+          background: 'var(--rs-bg-card)',
+          border: 'var(--rs-card-border)',
+          borderRadius: 'var(--rs-card-radius)', padding: '14px 18px',
           display: 'flex', flexDirection: 'column', gap: 10,
+          boxShadow: 'var(--rs-card-shadow)',
         }}>
           {totalPort != null && (
             <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
@@ -436,9 +438,10 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
         {/* Portfolio trajectory chart */}
         {chartData.length > 0 && (
           <div style={{
-            background: COLORS.cardBg,
-            border: '1px solid ' + COLORS.border,
-            borderRadius: 12, padding: '16px',
+            background: 'var(--rs-bg-card)',
+            border: 'var(--rs-card-border)',
+            borderRadius: 'var(--rs-card-radius)', padding: '16px',
+            boxShadow: 'var(--rs-card-shadow)',
           }}>
             <div style={{
               display: 'flex', justifyContent: 'space-between',

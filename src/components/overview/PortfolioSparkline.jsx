@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  ComposedChart, Area, Line, XAxis, YAxis,
+  AreaChart, Area, XAxis, YAxis,
   Tooltip, ReferenceLine, ResponsiveContainer
 } from 'recharts';
 
@@ -40,7 +40,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
   var sr = parseFloat(successRate) || 0;
 
   return (
-    <div style={{ background: '#fff', border: '1px solid ' + BORDER, borderRadius: 10, padding: '16px 20px 12px', boxShadow: 'var(--rs-shadow-sm)' }}>
+    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '16px 20px 12px', boxShadow: 'var(--rs-card-shadow)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>Portfolio Trajectory</div>
@@ -54,7 +54,17 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
       </div>
 
       <ResponsiveContainer width="100%" height={160}>
-        <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
+          <defs>
+            <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.15} />
+              <stop offset="95%" stopColor={TEAL_DARK} stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="iraGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.12} />
+              <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
           <YAxis
             tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -68,19 +78,12 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             labelFormatter={function(l) { return 'Age ' + l; }}
             contentStyle={{ fontSize: 11, border: '1px solid ' + BORDER, borderRadius: 6 }}
           />
-          {/* Area fill under total balance line */}
-          <Area
-            type="monotone"
-            dataKey="total"
-            stroke={TEAL_DARK}
-            fill={TEAL_DARK}
-            fillOpacity={0.07}
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 4 }}
-          />
-          <Line type="monotone" dataKey="ira"  stroke={GREEN}    strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} />
-          <Line type="monotone" dataKey="roth" stroke={TEAL_MID} strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} />
+          <Area type="monotone" dataKey="total" stroke={TEAL_DARK} strokeWidth={2.5}
+            fill="url(#totalGrad)" dot={false} activeDot={{ r: 4 }} />
+          <Area type="monotone" dataKey="ira" stroke={GREEN} strokeWidth={1.5}
+            strokeDasharray="4 2" fill="url(#iraGrad)" dot={false} activeDot={{ r: 3 }} />
+          <Area type="monotone" dataKey="roth" stroke={TEAL_MID} strokeWidth={1.5}
+            strokeDasharray="2 3" fill="none" dot={false} activeDot={{ r: 3 }} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -90,7 +93,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
               label={{ value: 'SS', position: 'top', fontSize: 9, fill: GREEN }}
             />
           )}
-        </ComposedChart>
+        </AreaChart>
       </ResponsiveContainer>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid ' + BORDER }}>

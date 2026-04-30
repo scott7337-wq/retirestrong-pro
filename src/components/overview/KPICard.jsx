@@ -5,7 +5,7 @@ export default function KPICard({ icon: Icon, iconColor, topBorderColor, label, 
     <div style={{
       background: 'var(--rs-bg-card)',
       border: '1px solid var(--rs-border)',
-      borderRadius: 12,
+      borderRadius: 'var(--rs-card-radius)',
       borderTop: '3px solid ' + topBorderColor,
       padding: '16px 18px',
       display: 'flex',

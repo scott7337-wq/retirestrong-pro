@@ -141,18 +141,18 @@ export default function CashFlowTab({ ctx }) {
 
   return (
     <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
-      <h2 style={{ fontSize: 22, color: '#1A1A1A', marginBottom: 4, fontWeight: 600 }}>Cash Flow Projection</h2>
-      <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>Year-by-year projections · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
+      <h2 style={{ fontFamily: 'var(--rs-font-display)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--rs-text-primary)', marginBottom: 3, marginTop: 0 }}>Cash Flow Projection</h2>
+      <p style={{ fontSize: 13, color: 'var(--rs-text-muted)', marginBottom: 20 }}>Year-by-year projections · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
 
       {/* Chart */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: '20px 16px', marginBottom: 24 }}>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={cashFlow} margin={{ top: 10, right: 20, left: 20, bottom: 0 }}>
+      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '20px 16px', marginBottom: 24, boxShadow: 'var(--rs-card-shadow)' }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={cashFlow} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
             <defs>
-              {[['gb','#10b981'],['gi','#60a5fa'],['gr','#a78bfa'],['ge','#f87171']].map(function(g) {
+              {[['gb','#0A4D54'],['gi','#3D6337'],['gr','#4A9E8E'],['ge','#8B3528']].map(function(g) {
                 return (
                   <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={g[1]} stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor={g[1]} stopOpacity={0.25}/>
                     <stop offset="95%" stopColor={g[1]} stopOpacity={0.02}/>
                   </linearGradient>
                 );
@@ -163,11 +163,11 @@ export default function CashFlowTab({ ctx }) {
             <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{ fontSize: 10, fill: TXT3 }}/>
             <Tooltip content={<TTip/>}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280' }}/>
-            <ReferenceLine x={2029} stroke="#34d399" strokeDasharray="4 4" label={{ value: 'SS starts', position: 'top', fontSize: 9, fill: '#34d399' }}/>
-            <Area type="monotone" dataKey="balance"     stroke="#10b981" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1}/>
-            <Area type="monotone" dataKey="iraBalance"  stroke="#60a5fa" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1}/>
-            <Area type="monotone" dataKey="rothBalance" stroke="#a78bfa" fill="url(#gr)" strokeWidth={1.5} name="Roth Balance"  fillOpacity={1}/>
-            <Area type="monotone" dataKey="expenses"    stroke="#f87171" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1}/>
+            <ReferenceLine x={2029} stroke="#3D6337" strokeDasharray="4 4" label={{ value: 'SS starts', position: 'top', fontSize: 9, fill: '#3D6337' }}/>
+            <Area type="monotone" dataKey="balance"     stroke="#0A4D54" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1}/>
+            <Area type="monotone" dataKey="iraBalance"  stroke="#3D6337" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1}/>
+            <Area type="monotone" dataKey="rothBalance" stroke="#4A9E8E" fill="url(#gr)" strokeWidth={1.5} name="Roth Balance"  fillOpacity={1}/>
+            <Area type="monotone" dataKey="expenses"    stroke="#8B3528" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1}/>
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -202,7 +202,7 @@ export default function CashFlowTab({ ctx }) {
       )}
 
       {/* Year-by-Year Detail table */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', overflow: 'hidden', boxShadow: 'var(--rs-card-shadow)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #E8E4DC', display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <span style={{ fontSize: 18, fontWeight: 600, color: '#1A1A1A' }}>Year-by-Year Detail</span>
           <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>Click any year for income &amp; portfolio detail</span>

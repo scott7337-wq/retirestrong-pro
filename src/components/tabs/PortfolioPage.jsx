@@ -46,7 +46,7 @@ function Collapsible({ title, right, defaultOpen, children }) {
   var open = openState[0]; var setOpen = openState[1];
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #E8E4DC', borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', marginBottom: 16, overflow: 'hidden', boxShadow: 'var(--rs-card-shadow)' }}>
       <button
         onClick={function() { setOpen(!open); }}
         style={{
@@ -86,7 +86,7 @@ function AssetComposition({ composition, totalPort }) {
   });
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #E8E4DC', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Asset Composition</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
         {/* Donut */}
@@ -252,7 +252,7 @@ function BucketFundingTimeline({ buckets, inp }) {
   ];
 
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 4 }}>Bucket Funding Timeline</div>
       <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>How each bucket covers your spending over time</div>
 
@@ -316,7 +316,7 @@ function BucketFundingTimeline({ buckets, inp }) {
 function BucketAllocation({ buckets, totalPort, fmtFull }) {
   var cfg = BUCKET_CFG;
   return (
-    <div style={{ background: '#fff', border: '1px solid #E8E4DC', borderRadius: 12, padding: 24, marginBottom: 16 }}>
+    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Bucket Allocation</div>
 
       {cfg.map(function(bc, idx) {
@@ -451,8 +451,8 @@ export default function PortfolioPage({
     <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
       {/* Page header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>Portfolio</h1>
-        <div style={{ fontSize: 14, color: '#6B7280' }}>
+        <h1 style={{ fontFamily: 'var(--rs-font-display)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--rs-text-primary)', margin: '0 0 3px' }}>Portfolio</h1>
+        <div style={{ fontSize: 13, color: 'var(--rs-text-muted)' }}>
           {planLabel} · {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
           {(unassigned || []).length > 0 && (
             <span style={{ marginLeft: 12, color: '#8B3528', fontWeight: 500 }}>
