@@ -2213,6 +2213,7 @@ export default function RetireStrongPlanner({ userId }) {
           />
         }
         activeTab={activeTab}
+        setActiveTab={setActiveTab}
         ctx={tabCtx}
       >
         <AssetEditorModal />

@@ -16,7 +16,7 @@ import AIInsightsRail from './AIInsightsRail.jsx';
  *   ctx       — tabCtx from App.jsx, forwarded to AIInsightsRail for data-driven cards
  *   children  — tab content rendered in the main pane
  */
-export default function AppShell({ sidebar, activeTab, ctx, children }) {
+export default function AppShell({ sidebar, activeTab, setActiveTab, ctx, children }) {
   const showRail = activeTab !== 'coach';
 
   return (
@@ -43,7 +43,7 @@ export default function AppShell({ sidebar, activeTab, ctx, children }) {
       </main>
 
       {showRail && (
-        <AIInsightsRail activeTab={activeTab} ctx={ctx} />
+        <AIInsightsRail activeTab={activeTab} ctx={ctx} setActiveTab={setActiveTab} />
       )}
     </div>
   );

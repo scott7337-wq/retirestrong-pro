@@ -39,6 +39,18 @@
   --rs-shadow-sm:       0 1px 3px rgba(0,0,0,0.06);
   --rs-shadow-md:       0 2px 8px rgba(10,77,84,0.10);
   --rs-shadow-priority: 0 2px 12px rgba(10,77,84,0.15);
+
+  /* ── Card system ── */
+  --rs-card-radius:              12px;
+  --rs-card-border:              1px solid var(--rs-border);
+  --rs-card-shadow:              0 1px 4px rgba(0,0,0,0.06);
+  --rs-card-shadow-md:           0 2px 12px rgba(10,77,84,0.10);
+  --rs-card-padding:             16px 18px;
+  --rs-card-priority-border-top: 3px solid var(--rs-teal-dark);
+
+  /* ── Typography ── */
+  --rs-font-display: 'Source Serif 4', Georgia, serif;
+  --rs-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 }
 
 @keyframes rsSlideDown {

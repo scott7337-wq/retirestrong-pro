@@ -120,7 +120,7 @@ export default function OverviewPage({
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px', fontFamily: "'Source Sans 3', sans-serif" }}>Overview</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1A1A1A', margin: '0 0 4px', fontFamily: 'var(--rs-font-display)', letterSpacing: '-0.02em' }}>Overview</h1>
           <div style={{ fontSize: 14, color: '#6B7280' }}>{planLabel} · {monthStr}</div>
         </div>
         <div style={{ fontSize: 13, color: '#9CA3AF' }}>Last updated: Today at {timeStr}</div>

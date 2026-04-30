@@ -4,7 +4,14 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 function renderMarkdown(text) {
   if (!text) return '';
+  // Strip tool call citations before rendering
   var html = text
+    .replace(/\(`[^`]+`\)/g, '')
+    .replace(/\(per `[^`]+`\)/g, '')
+    .replace(/\(from `[^`]+`\)/g, '')
+    .replace(/\(via `[^`]+`\)/g, '')
+    .replace(/`[a-z_]+`\s*\)/g, ')')
+    .replace(/\s+\(\s*\)/g, '')
     // Bold: **text** → <strong>
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     // Tables: detect header separator rows (e.g. |---|---| )
