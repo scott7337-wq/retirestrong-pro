@@ -66,6 +66,11 @@ const COLORS = {
   green:        '#3D6337',
 };
 
+const CARD        = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+const CARD_OK     = Object.assign({}, CARD, { borderTop: '3px solid #3D6337' });
+const CARD_WARN   = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
+const CARD_DANGER = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });
+
 // ── Tool disclosure row ─────────────────────────────────────────────────────
 function ToolCallsRow({ toolCalls }) {
   const [open, setOpen] = useState(false);
@@ -398,13 +403,7 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
         </div>
 
         {/* Success rate */}
-        <div style={{
-          background: '#FFFFFF',
-          border: '1px solid #E8E4DC',
-          borderTop: '3px solid ' + scoreColor,
-          borderRadius: '12px', padding: '16px 18px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        }}>
+        <div style={Object.assign({}, CARD, { borderTop: '3px solid ' + scoreColor, padding: '16px 18px' })}>
           <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
           <div style={{ fontSize: 38, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
             {successRate != null ? successRate + '%' : '—'}
@@ -415,14 +414,7 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
         </div>
 
         {/* Key numbers */}
-        <div style={{
-          background: '#FFFFFF',
-          border: '1px solid #E8E4DC',
-          borderTop: '3px solid #0A4D54',
-          borderRadius: '12px', padding: '14px 18px',
-          display: 'flex', flexDirection: 'column', gap: 10,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        }}>
+        <div style={Object.assign({}, CARD, { padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 })}>
           {totalPort != null && (
             <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
           )}
@@ -439,13 +431,7 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
 
         {/* Portfolio trajectory chart */}
         {chartData.length > 0 && (
-          <div style={{
-            background: '#FFFFFF',
-            border: '1px solid #E8E4DC',
-            borderTop: '3px solid #0A4D54',
-            borderRadius: '12px', padding: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          }}>
+          <div style={Object.assign({}, CARD, { padding: '16px' })}>
             <div style={{
               display: 'flex', justifyContent: 'space-between',
               alignItems: 'flex-start', marginBottom: 12,

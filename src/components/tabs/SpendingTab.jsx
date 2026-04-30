@@ -10,7 +10,10 @@ export default function SpendingTab({ ctx }) {
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
-  var CARD = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD        = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD_OK     = Object.assign({}, CARD, { borderTop: '3px solid #3D6337' });
+  var CARD_WARN   = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
+  var CARD_DANGER = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });
 
   var saveActualsState = useState('idle');
   var saveStatus = saveActualsState[0]; var setSaveStatus = saveActualsState[1];
@@ -83,7 +86,7 @@ export default function SpendingTab({ ctx }) {
 
       {/* Essential / Discretionary breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #3D6337', borderRadius: '12px', padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <div style={Object.assign({}, CARD_OK, { padding: '14px 16px', marginBottom: 0 })}>
           <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
             Essential Spending{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 60%)</span>}
           </div>
@@ -95,7 +98,7 @@ export default function SpendingTab({ ctx }) {
             <div style={{ height: '100%', width: essentialPct + '%', background: '#0A4D54', borderRadius: 3 }}/>
           </div>
         </div>
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #8A5515', borderRadius: '12px', padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <div style={Object.assign({}, CARD_WARN, { padding: '14px 16px', marginBottom: 0 })}>
           <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
             Discretionary{!hasSubFields && <span style={{ fontSize: 10, color: '#9CA3AF', textTransform: 'none', marginLeft: 4 }}>(est. 40%)</span>}
           </div>

@@ -9,18 +9,10 @@ var MUTED    = '#6B7280';
 var TEXT     = '#374151';
 var TEXT_PRI = '#1A1A1A';
 
-var BASE_SHADOW   = '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
-var STRONG_SHADOW = '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)';
-
-var CARD = {
-  background: '#FFFFFF',
-  border: '1px solid ' + BORDER,
-  borderTop: '3px solid ' + TEAL,
-  borderRadius: '12px',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-  padding: '18px 20px',
-  marginBottom: 16,
-};
+var CARD        = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+var CARD_WARN   = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
+var CARD_DANGER = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });
+var CARD_OK     = Object.assign({}, CARD, { borderTop: '3px solid #3D6337' });
 
 function SectionLabel({ children }) {
   return (
@@ -57,10 +49,7 @@ export default function RothConversionsTab({ ctx }) {
       </p>
 
       {/* 2026 Working Year Notice */}
-      <div style={Object.assign({}, CARD, {
-        borderTop: '3px solid ' + RED,
-        boxShadow: STRONG_SHADOW,
-      })}>
+      <div style={CARD_DANGER}>
         <SectionLabel>2026 — Working Year</SectionLabel>
         <div style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>
           <strong style={{ color: RED }}>No Roth conversions in 2026.</strong>{' '}
@@ -103,10 +92,7 @@ export default function RothConversionsTab({ ctx }) {
       </div>
 
       {/* IRMAA Warning */}
-      <div style={Object.assign({}, CARD, {
-        borderTop: '3px solid ' + AMBER,
-        boxShadow: STRONG_SHADOW,
-      })}>
+      <div style={CARD_WARN}>
         <SectionLabel>IRMAA: The Hidden Conversion Tax</SectionLabel>
         <div style={{ fontSize: 13, color: TEXT, lineHeight: 1.6 }}>
           Medicare uses income from <strong style={{ color: TEXT_PRI }}>2 years ago</strong>.
