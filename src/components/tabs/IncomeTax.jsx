@@ -10,7 +10,9 @@ export default function IncomeTaxTab({ ctx }) {
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
-  var CARD = { background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 'var(--rs-card-padding)', marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' };
+  var CARD     = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD_TAX = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #8A5515', borderRadius: '12px', padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD_RED = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #8B3528', borderRadius: '12px', padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
 
   return (
     <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
@@ -102,7 +104,7 @@ export default function IncomeTaxTab({ ctx }) {
         return (
           <div>
             {/* Tax Bracket Thermometer */}
-            <div style={CARD}>
+            <div style={CARD_TAX}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 500, color: '#1A1A1A', margin: 0 }}>Tax Position — {tYear}</h2>
                 <span style={{ fontSize: 12, color: '#6B7280' }}>MAGI view · bracket segments show gross thresholds</span>
@@ -201,7 +203,7 @@ export default function IncomeTaxTab({ ctx }) {
             </div>
 
             {/* Tax bracket position */}
-            <div style={CARD}>
+            <div style={CARD_TAX}>
               <h2 style={{ fontSize: 18, fontWeight: 500, color: '#1A1A1A', marginBottom: 6, marginTop: 0 }}>
                 Tax Bracket Position — {tYear}
               </h2>
@@ -262,7 +264,7 @@ export default function IncomeTaxTab({ ctx }) {
                 </div>
               </div>
 
-              <div style={Object.assign({}, CARD, { marginBottom: 0 })}>
+              <div style={Object.assign({}, CARD_RED, { marginBottom: 0 })}>
                 <h2 style={{ fontSize: 18, fontWeight: 500, color: '#1A1A1A', marginBottom: 14, marginTop: 0 }}>Estimated Tax — {tYear}</h2>
                 {[
                   ['Gross Taxable Income', (fmtFull || fmtC)(Math.round(grossTaxable)), '#3D6337'],

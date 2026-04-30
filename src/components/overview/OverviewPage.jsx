@@ -175,13 +175,13 @@ export default function OverviewPage({
       {/* 3 — This Month's Draw */}
       {!drawDismissed && monthlyAmt > 0 && (
         <div style={{
-          background: 'var(--rs-bg-card)',
-          border: '1px solid var(--rs-border)',
-          borderLeft: '3px solid var(--rs-teal-dark)',
-          borderRadius: 10,
+          background: '#FFFFFF',
+          border: '1px solid #E8E4DC',
+          borderTop: '3px solid #0A4D54',
+          borderRadius: '12px',
           padding: '14px 16px',
           marginBottom: 16,
-          boxShadow: '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -208,12 +208,13 @@ export default function OverviewPage({
 
       {/* 4 — Spending vs. Income */}
       <div style={{
-        background: 'var(--rs-bg-card)',
-        border: '1px solid var(--rs-border)',
-        borderRadius: 10,
+        background: '#FFFFFF',
+        border: '1px solid #E8E4DC',
+        borderTop: '3px solid #0A4D54',
+        borderRadius: '12px',
         padding: '16px 20px',
         marginBottom: 16,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
       }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
           SPENDING VS. INCOME · {cfYear}

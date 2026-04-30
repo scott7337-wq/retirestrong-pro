@@ -29,7 +29,7 @@ export function Card({ children, priority, accent, padding, style, ...props }) {
     ? '3px solid ' + accentColor
     : priority
     ? '3px solid #0A4D54'
-    : '1px solid #E8E4DC';
+    : '3px solid #0A4D54';
   var pd = padding === 'none'
     ? 0
     : padding === 'sm'

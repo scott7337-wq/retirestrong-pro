@@ -29,7 +29,7 @@ export default function MonteCarloTab({ ctx }) {
       <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>500 simulations · bucket strategy with dividend refill, TIPS-first sequencing, market-condition-aware equity sales</p>
 
       {/* Scenario selector */}
-      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '16px 20px', marginBottom: 24, boxShadow: 'var(--rs-card-shadow)' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '16px 20px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Scenario</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: activePreset && activePreset.scenarioInsight ? 12 : 0 }}>
           {SCENARIO_PRESETS.map(function(preset) {
@@ -81,7 +81,7 @@ export default function MonteCarloTab({ ctx }) {
       </div>
 
       {/* Total Portfolio percentile bands */}
-      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '20px', marginBottom: 20, boxShadow: 'var(--rs-card-shadow)' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #8B3528', borderRadius: '12px', padding: '20px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <h3 style={{ fontSize: 15, color: '#1A1A1A', marginBottom: 4, fontWeight: 600 }}>Total Portfolio — Percentile Bands</h3>
         <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 14, lineHeight: 1.5 }}>Shaded bands show 10th–90th percentile range. Bear years: cash + TIPS only. Good years: trim equities, rebalance to Bucket 1.</p>
         <ResponsiveContainer width="100%" height={280}>
@@ -110,7 +110,7 @@ export default function MonteCarloTab({ ctx }) {
 
       {/* Median Bucket Trajectories */}
       {bucketPctData && bucketPctData.length > 0 && (
-        <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '20px', marginBottom: 20, boxShadow: 'var(--rs-card-shadow)' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           <h3 style={{ fontSize: 15, color: '#1A1A1A', marginBottom: 4, fontWeight: 600 }}>Median Bucket Trajectories</h3>
           <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 14, lineHeight: 1.5 }}>Median balance of each bucket — shows SORR protection in action. Bucket 1 depletes first, Bucket 3 grows longest.</p>
           <ResponsiveContainer width="100%" height={220}>
@@ -130,9 +130,9 @@ export default function MonteCarloTab({ ctx }) {
               <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{ fontSize: 10, fill: '#6B7280' }}/>
               <Tooltip content={<TTip/>}/>
               <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280' }}/>
-              <Area type="monotone" dataKey="b1" stroke="#4A9E8E" fill="url(#gb1)" strokeWidth={1.5} name="Bucket 1 (Cash)"   fillOpacity={1} isAnimationActive={false}/>
-              <Area type="monotone" dataKey="b2" stroke="#3D6337" fill="url(#gb2)" strokeWidth={1.5} name="Bucket 2 (Income)" fillOpacity={1} isAnimationActive={false}/>
-              <Area type="monotone" dataKey="b3" stroke="#0A4D54" fill="url(#gb3)" strokeWidth={2}   name="Bucket 3 (Growth)" fillOpacity={1} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b1" stroke="#4A9E8E" fill="url(#gb1)" strokeWidth={2} name="Bucket 1 (Cash)"   fillOpacity={1} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b2" stroke="#3D6337" fill="url(#gb2)" strokeWidth={2} name="Bucket 2 (Income)" fillOpacity={1} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b3" stroke="#0A4D54" fill="url(#gb3)" strokeWidth={2} name="Bucket 3 (Growth)" fillOpacity={1} isAnimationActive={false}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>

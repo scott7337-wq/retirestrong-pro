@@ -5,13 +5,13 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 // ── Color maps ────────────────────────────────────────────────────────────────
 var COMP_COLORS = {
-  'Cash & Near-Cash': '#0A4D54',
-  'TIPS / Inflation':  '#4A9E8E',
+  'Cash & Near-Cash': '#4A9E8E',
+  'TIPS / Inflation':  '#3D6337',
   'Dividend/REIT':     '#8A5515',
-  'Equity ETF':        '#3D6337',
-  'International':     '#8B3528',
-  'Roth Assets':       '#5B6FA6',
-  'Other':             '#9CA3AF',
+  'Equity ETF':        '#0A4D54',
+  'International':     '#2B6CB0',
+  'Roth Assets':       '#553C9A',
+  'Other':             '#6B7280',
 };
 
 var BUCKET_CFG = [
@@ -46,7 +46,7 @@ function Collapsible({ title, right, defaultOpen, children }) {
   var open = openState[0]; var setOpen = openState[1];
 
   return (
-    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', marginBottom: 16, overflow: 'hidden', boxShadow: 'var(--rs-card-shadow)' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', marginBottom: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
       <button
         onClick={function() { setOpen(!open); }}
         style={{
@@ -86,7 +86,7 @@ function AssetComposition({ composition, totalPort }) {
   });
 
   return (
-    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: 24, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Asset Composition</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
         {/* Donut */}
@@ -252,7 +252,7 @@ function BucketFundingTimeline({ buckets, inp }) {
   ];
 
   return (
-    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: 24, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 4 }}>Bucket Funding Timeline</div>
       <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 20 }}>How each bucket covers your spending over time</div>
 
@@ -316,7 +316,7 @@ function BucketFundingTimeline({ buckets, inp }) {
 function BucketAllocation({ buckets, totalPort, fmtFull }) {
   var cfg = BUCKET_CFG;
   return (
-    <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: 24, marginBottom: 16, boxShadow: 'var(--rs-card-shadow)' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: 24, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
       <div style={{ fontSize: 20, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Bucket Allocation</div>
 
       {cfg.map(function(bc, idx) {

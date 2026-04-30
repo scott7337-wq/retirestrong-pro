@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, ChevronDown, ChevronRight, Loader } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 function renderMarkdown(text) {
   if (!text) return '';
@@ -399,10 +399,11 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
 
         {/* Success rate */}
         <div style={{
-          background: 'var(--rs-bg-card)',
-          border: 'var(--rs-card-border)',
-          borderRadius: 'var(--rs-card-radius)', padding: '16px 18px',
-          boxShadow: 'var(--rs-card-shadow)',
+          background: '#FFFFFF',
+          border: '1px solid #E8E4DC',
+          borderTop: '3px solid ' + scoreColor,
+          borderRadius: '12px', padding: '16px 18px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}>
           <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 6 }}>Monte Carlo success rate</div>
           <div style={{ fontSize: 38, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>
@@ -415,11 +416,12 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
 
         {/* Key numbers */}
         <div style={{
-          background: 'var(--rs-bg-card)',
-          border: 'var(--rs-card-border)',
-          borderRadius: 'var(--rs-card-radius)', padding: '14px 18px',
+          background: '#FFFFFF',
+          border: '1px solid #E8E4DC',
+          borderTop: '3px solid #0A4D54',
+          borderRadius: '12px', padding: '14px 18px',
           display: 'flex', flexDirection: 'column', gap: 10,
-          boxShadow: 'var(--rs-card-shadow)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
         }}>
           {totalPort != null && (
             <KeyRow label="Portfolio" value={fmtC ? fmtC(totalPort) : '$' + Math.round(totalPort / 1000) + 'k'} />
@@ -438,10 +440,11 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
         {/* Portfolio trajectory chart */}
         {chartData.length > 0 && (
           <div style={{
-            background: 'var(--rs-bg-card)',
-            border: 'var(--rs-card-border)',
-            borderRadius: 'var(--rs-card-radius)', padding: '16px',
-            boxShadow: 'var(--rs-card-shadow)',
+            background: '#FFFFFF',
+            border: '1px solid #E8E4DC',
+            borderTop: '3px solid #0A4D54',
+            borderRadius: '12px', padding: '16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}>
             <div style={{
               display: 'flex', justifyContent: 'space-between',
@@ -463,10 +466,20 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
               }}>{successRate}% success</div>
             </div>
             <ResponsiveContainer width="100%" height={180}>
-              <LineChart
+              <ComposedChart
                 data={chartData}
                 margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
               >
+                <defs>
+                  <linearGradient id="coachTotalGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={COLORS.tealDark} stopOpacity={0.15} />
+                    <stop offset="95%" stopColor={COLORS.tealDark} stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="coachIraGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#3D6337" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#3D6337" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
                 <XAxis
                   dataKey="age"
                   tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -485,16 +498,16 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
                     borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   }}
                 />
-                <Line type="monotone" dataKey="total"
-                  stroke={COLORS.tealDark} strokeWidth={2.5}
-                  dot={false} activeDot={{ r: 4 }} />
-                <Line type="monotone" dataKey="ira"
-                  stroke="#3D6337" strokeWidth={1.5} strokeDasharray="4 2"
-                  dot={false} activeDot={{ r: 3 }} />
+                <Area type="monotone" dataKey="total"
+                  stroke={COLORS.tealDark} fill="url(#coachTotalGrad)" fillOpacity={1}
+                  strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                <Area type="monotone" dataKey="ira"
+                  stroke="#3D6337" fill="url(#coachIraGrad)" fillOpacity={1}
+                  strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
                 <Line type="monotone" dataKey="roth"
-                  stroke={COLORS.tealMid} strokeWidth={1.5} strokeDasharray="2 3"
-                  dot={false} activeDot={{ r: 3 }} />
-              </LineChart>
+                  stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="3 3"
+                  dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+              </ComposedChart>
             </ResponsiveContainer>
             <div style={{
               display: 'flex', gap: 14, marginTop: 8,
@@ -502,8 +515,8 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
             }}>
               {[
                 { color: COLORS.tealDark, label: 'Total', dash: false },
-                { color: '#3D6337',       label: 'IRA',   dash: true },
-                { color: COLORS.tealMid,  label: 'Roth',  dash: true },
+                { color: '#3D6337',       label: 'IRA',   dash: false },
+                { color: '#7C3AED',       label: 'Roth',  dash: true },
               ].map(l => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <svg width="16" height="4">

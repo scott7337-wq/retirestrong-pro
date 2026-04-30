@@ -145,7 +145,7 @@ export default function CashFlowTab({ ctx }) {
       <p style={{ fontSize: 13, color: 'var(--rs-text-muted)', marginBottom: 20 }}>Year-by-year projections · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
 
       {/* Chart */}
-      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', padding: '20px 16px', marginBottom: 24, boxShadow: 'var(--rs-card-shadow)' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px 16px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={cashFlow} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
             <defs>
@@ -202,7 +202,7 @@ export default function CashFlowTab({ ctx }) {
       )}
 
       {/* Year-by-Year Detail table */}
-      <div style={{ background: 'var(--rs-bg-card)', border: 'var(--rs-card-border)', borderRadius: 'var(--rs-card-radius)', overflow: 'hidden', boxShadow: 'var(--rs-card-shadow)' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #E8E4DC', display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <span style={{ fontSize: 18, fontWeight: 600, color: '#1A1A1A' }}>Year-by-Year Detail</span>
           <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>Click any year for income &amp; portfolio detail</span>

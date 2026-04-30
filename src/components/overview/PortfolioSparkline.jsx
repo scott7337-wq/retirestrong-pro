@@ -56,6 +56,16 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
 
       <ResponsiveContainer width="100%" height={160}>
         <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+          <defs>
+            <linearGradient id="psTotalGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.15} />
+              <stop offset="95%" stopColor={TEAL_DARK} stopOpacity={0.03} />
+            </linearGradient>
+            <linearGradient id="psIraGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.12} />
+              <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
           <YAxis
             tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -73,15 +83,25 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             type="monotone"
             dataKey="total"
             stroke={TEAL_DARK}
-            fill={TEAL_DARK}
-            fillOpacity={0.07}
+            fill="url(#psTotalGrad)"
+            fillOpacity={1}
             strokeWidth={2.5}
             dot={false}
             activeDot={{ r: 4 }}
             isAnimationActive={false}
           />
-          <Line type="monotone" dataKey="ira"  stroke={GREEN}    strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
-          <Line type="monotone" dataKey="roth" stroke={PURPLE}   strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+          <Area
+            type="monotone"
+            dataKey="ira"
+            stroke={GREEN}
+            fill="url(#psIraGrad)"
+            fillOpacity={1}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 3 }}
+            isAnimationActive={false}
+          />
+          <Line type="monotone" dataKey="roth" stroke={PURPLE} strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -98,7 +118,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
         <div style={{ display: 'flex', gap: 14 }}>
           {[
             { color: TEAL_DARK, label: 'Total', dash: false },
-            { color: GREEN,     label: 'IRA',   dash: true  },
+            { color: GREEN,     label: 'IRA',   dash: false },
             { color: PURPLE,    label: 'Roth',  dash: true  },
           ].map(function(l) {
             return (

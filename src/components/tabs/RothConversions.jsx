@@ -15,8 +15,9 @@ var STRONG_SHADOW = '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)';
 var CARD = {
   background: '#FFFFFF',
   border: '1px solid ' + BORDER,
+  borderTop: '3px solid ' + TEAL,
   borderRadius: '12px',
-  boxShadow: BASE_SHADOW,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
   padding: '18px 20px',
   marginBottom: 16,
 };
