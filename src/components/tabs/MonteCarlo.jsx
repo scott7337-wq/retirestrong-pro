@@ -81,7 +81,7 @@ export default function MonteCarloTab({ ctx }) {
       </div>
 
       {/* Total Portfolio percentile bands */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #8B3528', borderRadius: '12px', padding: '20px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <h3 style={{ fontSize: 15, color: '#1A1A1A', marginBottom: 4, fontWeight: 600 }}>Total Portfolio — Percentile Bands</h3>
         <p style={{ fontSize: 12, color: '#6B7280', marginBottom: 14, lineHeight: 1.5 }}>Shaded bands show 10th–90th percentile range. Bear years: cash + TIPS only. Good years: trim equities, rebalance to Bucket 1.</p>
         <ResponsiveContainer width="100%" height={280}>

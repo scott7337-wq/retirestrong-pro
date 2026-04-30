@@ -149,7 +149,7 @@ export default function CashFlowTab({ ctx }) {
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={cashFlow} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
             <defs>
-              {[['gb','#0A4D54'],['gi','#3D6337'],['gr','#4A9E8E'],['ge','#8B3528']].map(function(g) {
+              {[['gb','#0A4D54'],['gi','#3D6337'],['ge','#8B3528']].map(function(g) {
                 return (
                   <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={g[1]} stopOpacity={0.25}/>
@@ -166,7 +166,7 @@ export default function CashFlowTab({ ctx }) {
             <ReferenceLine x={2029} stroke="#3D6337" strokeDasharray="4 4" label={{ value: 'SS starts', position: 'top', fontSize: 9, fill: '#3D6337' }}/>
             <Area type="monotone" dataKey="balance"     stroke="#0A4D54" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1} isAnimationActive={false}/>
             <Area type="monotone" dataKey="iraBalance"  stroke="#3D6337" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1} isAnimationActive={false}/>
-            <Area type="monotone" dataKey="rothBalance" stroke="#4A9E8E" fill="url(#gr)" strokeWidth={1.5} name="Roth Balance"  fillOpacity={1} isAnimationActive={false}/>
+            <Area type="monotone" dataKey="rothBalance" stroke="#7C3AED" fill="none" strokeWidth={1.5} strokeDasharray="4 3" name="Roth Balance" isAnimationActive={false}/>
             <Area type="monotone" dataKey="expenses"    stroke="#8B3528" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1} isAnimationActive={false}/>
           </AreaChart>
         </ResponsiveContainer>
