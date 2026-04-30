@@ -1,7 +1,20 @@
 import React, { useState, useRef } from 'react';
 import { getRMDStartAge } from '../../engine/constants.js';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-         ResponsiveContainer, ReferenceLine } from 'recharts';
+import {
+  ComposedChart, BarChart, Bar,
+  AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts';
+
+var CARD = {
+  background: '#FFFFFF',
+  border: '1px solid #E5E7EB',
+  borderRadius: '8px',
+  padding: '20px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+  marginBottom: 20,
+};
 
 function fmtShort(v) {
   if (!v && v !== 0) return '—';
@@ -102,109 +115,220 @@ export default function CashFlowTab({ ctx }) {
     }, 60);
   }
 
-  // Compute critical years from cashFlow data
+  // Dynamic subtitle: funded through age X
+  var cf = cashFlow || [];
+  var currentAge = (inp && inp.currentAge) ? Number(inp.currentAge) : 66;
+  var firstYear = cf.length > 0 ? cf[0].year : 2026;
+  var lastYear  = cf.length > 0 ? cf[cf.length - 1].year : 2055;
+  var fundedAge = currentAge + (lastYear - firstYear);
+
+  // Compute critical years
   var criticalYears = (function() {
-    if (!cashFlow || cashFlow.length === 0) return [];
+    if (cf.length === 0) return [];
     var cards = [];
 
     // Sequence Risk: first year with significant portfolio draw
-    for (var i = 0; i < Math.min(cashFlow.length, 8); i++) {
-      var r = cashFlow[i];
+    var seqYear = firstYear;
+    for (var i = 0; i < Math.min(cf.length, 8); i++) {
+      var r = cf[i];
       var draw = (r.fromIRA || 0) + (r.fromRoth || 0) + (r.fromTaxable || 0);
       var tot = (r.expenses || 0) + (r.healthcare || 0);
       if (draw > 0 && tot > 0 && draw / tot > 0.15) {
-        cards.push({ year: r.year, label: 'Sequence Risk', sub: 'High portfolio draw — volatility hurts most here', color: '#8B3528', bg: '#FEF2F2', border: '#FECACA' });
+        seqYear = r.year;
         break;
       }
     }
 
-    // SS/Medicare Start: first year primarySS > 0
-    for (var j = 0; j < cashFlow.length; j++) {
-      if ((cashFlow[j].primarySS || 0) > 0) {
-        cards.push({ year: cashFlow[j].year, label: 'SS / Medicare', sub: 'Income floor activates · Watch IRMAA brackets', color: '#0A4D54', bg: '#E8F5F2', border: '#A7D9D4' });
-        break;
-      }
-    }
+    // SS Start: birthYear + ssAge
+    var birthYr = inp && inp.birthYear ? Number(inp.birthYear) : (2026 - currentAge);
+    var ssAge   = inp && inp.ssAge    ? Number(inp.ssAge)    : 70;
+    var ssYear  = birthYr + ssAge;
+    var ssAge70 = currentAge + (ssYear - firstYear);
 
-    // RMD Trigger: age 73, derived from currentAge + first cashFlow year
-    var currentAge = (inp && inp.currentAge) ? Number(inp.currentAge) : 62;
-    var firstYear = cashFlow[0].year;
-    var lastYear = cashFlow[cashFlow.length - 1].year;
+    // RMD Trigger
     var rmdStartAge = getRMDStartAge(inp && inp.birthYear);
     var rmdYear = firstYear + Math.max(0, rmdStartAge - currentAge);
-    if (rmdYear <= lastYear) {
-      cards.push({ year: rmdYear, label: 'RMD Trigger', sub: 'Required minimum distributions begin at ' + rmdStartAge, color: '#3D6337', bg: '#F0FDF4', border: '#BBF7D0' });
-    }
+    var rmdAge  = currentAge + (rmdYear - firstYear);
 
+    cards.push({
+      type: 'seq',
+      year: seqYear,
+      age: currentAge + (seqYear - firstYear),
+      title: 'Peak Sequence Risk',
+      body: 'First 2 years: portfolio most vulnerable to downturn',
+    });
+    cards.push({
+      type: 'ss',
+      year: ssYear,
+      age: ssAge70,
+      title: 'SS & Medicare Start',
+      body: 'Income floor begins, healthcare costs drop 60%',
+    });
+    if (rmdYear <= lastYear) {
+      cards.push({
+        type: 'rmd',
+        year: rmdYear,
+        age: rmdAge,
+        title: 'RMD Trigger Year',
+        body: 'Required distributions may push to 24% tax bracket',
+      });
+    }
     return cards;
   })();
 
-  return (
-    <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
-      <h2 style={{ fontFamily: 'var(--rs-font-display)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--rs-text-primary)', marginBottom: 3, marginTop: 0 }}>Cash Flow Projection</h2>
-      <p style={{ fontSize: 13, color: 'var(--rs-text-muted)', marginBottom: 20 }}>Year-by-year projections · Jan 1 balances · Withdrawal sourcing · IRMAA tracking</p>
+  // Chart data: enrich with withdrawal fields
+  var chartData = cf.map(function(row) {
+    var portfolioWithdrawal = (row.fromIRA || 0) + (row.fromRoth || 0) + (row.fromTaxable || 0);
+    var ssIncome = (row.primarySS || 0) + (row.spouseSS || 0);
+    return Object.assign({}, row, {
+      portfolioWithdrawal: portfolioWithdrawal,
+      ssIncome: ssIncome,
+    });
+  });
 
-      {/* Chart */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px 16px', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={cashFlow} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
+  // Withdrawal sourcing chart data (bucket split)
+  var sourcingData = cf.map(function(row) {
+    var b1 = row.fromTaxable || 0;
+    var b2 = row.fromIRA     || 0;
+    var b3 = row.fromRoth    || 0;
+    // If all zero, fall back to proportional split of total draw
+    if (b1 === 0 && b2 === 0 && b3 === 0) {
+      var total = (row.fromIRA || 0) + (row.fromRoth || 0) + (row.fromTaxable || 0);
+      b1 = total * 0.30;
+      b2 = total * 0.50;
+      b3 = total * 0.20;
+    }
+    return { year: row.year, b1: b1, b2: b2, b3: b3 };
+  });
+
+  return (
+    <div style={{ padding: '24px 28px', background: '#F9FAFB', minHeight: '100%' }}>
+
+      {/* Page Header */}
+      <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>Plan</h1>
+      <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 24 }}>
+        {'Your retirement is funded through age ' + fundedAge + ' with strategic bucket withdrawals and Social Security.'}
+      </p>
+
+      {/* Main Chart — Retirement Timeline & Balance Projection */}
+      <div style={Object.assign({}, CARD)}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+          Retirement Timeline &amp; Balance Projection
+        </div>
+        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
+          Portfolio balance vs. annual withdrawals
+        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 48, bottom: 4, left: 8 }}>
             <defs>
-              {[['gb','#0A4D54'],['gi','#3D6337'],['ge','#8B3528']].map(function(g) {
-                return (
-                  <linearGradient key={g[0]} id={g[0]} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={g[1]} stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor={g[1]} stopOpacity={0.02}/>
-                  </linearGradient>
-                );
-              })}
+              <linearGradient id="cfBalGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#2C5F5A" stopOpacity={0.18}/>
+                <stop offset="95%" stopColor="#2C5F5A" stopOpacity={0.02}/>
+              </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={BORDER}/>
-            <XAxis dataKey="year" stroke={BORDER2} tick={{ fontSize: 10, fill: TXT3 }}/>
-            <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{ fontSize: 10, fill: TXT3 }}/>
-            <Tooltip content={<TTip/>}/>
-            <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280' }}/>
-            <ReferenceLine x={2029} stroke="#3D6337" strokeDasharray="4 4" label={{ value: 'SS starts', position: 'top', fontSize: 9, fill: '#3D6337' }}/>
-            <Area type="monotone" dataKey="balance"     stroke="#0A4D54" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1} isAnimationActive={false}/>
-            <Area type="monotone" dataKey="iraBalance"  stroke="#3D6337" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1} isAnimationActive={false}/>
-            <Area type="monotone" dataKey="rothBalance" stroke="#7C3AED" fill="none" strokeWidth={1.5} strokeDasharray="4 3" name="Roth Balance" isAnimationActive={false}/>
-            <Area type="monotone" dataKey="expenses"    stroke="#8B3528" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1} isAnimationActive={false}/>
-          </AreaChart>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6"/>
+            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB"/>
+            <YAxis yAxisId="left"  tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={56}/>
+            <YAxis yAxisId="right" orientation="right" tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={52}/>
+            <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
+            <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280', paddingTop: 8 }}/>
+            <Bar yAxisId="right" dataKey="portfolioWithdrawal" name="Portfolio Withdrawal" fill="#C8A882" maxBarSize={18} isAnimationActive={false}/>
+            <Bar yAxisId="right" dataKey="ssIncome"            name="Social Security"      fill="#3D6337" maxBarSize={18} isAnimationActive={false}/>
+            <Area yAxisId="left" type="monotone" dataKey="balance" name="Total Balance"
+              stroke="#2C5F5A" fill="url(#cfBalGrad)" strokeWidth={2.5}
+              fillOpacity={1} isAnimationActive={false}/>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Critical Years strip */}
+      {/* Critical Years Section */}
       {criticalYears.length > 0 && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          {criticalYears.map(function(card) {
-            return (
-              <button
-                key={card.year}
-                onClick={function() { jumpToYear(card.year); }}
-                style={{
-                  flex: 1, minWidth: 160,
-                  background: card.bg, border: '1px solid ' + card.border,
-                  borderRadius: 10, padding: '10px 14px',
-                  textAlign: 'left', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', gap: 3,
-                  transition: 'opacity 0.12s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: card.color }}>{card.label}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: card.color }}>{card.year}</span>
-                </div>
-                <div style={{ fontSize: 11, color: '#6B7280', lineHeight: 1.4 }}>{card.sub}</div>
-                <div style={{ fontSize: 10, color: card.color, marginTop: 2 }}>→ Click to expand in table</div>
-              </button>
-            );
-          })}
+        <div style={{
+          border: '1px solid #FCD34D',
+          borderRadius: '8px',
+          padding: '20px',
+          background: '#FFFBEB',
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#92400E', marginBottom: 16 }}>
+            ⚠ Critical Years in Your Plan
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {criticalYears.map(function(card) {
+              var isSS   = card.type === 'ss';
+              var accent = isSS ? '#0D9488' : '#EF4444';
+              var border = isSS ? '1px solid #5EEAD4' : '1px solid #FCA5A5';
+              var icon   = isSS ? '◎' : '⚠';
+              return (
+                <button
+                  key={card.type}
+                  onClick={function() { jumpToYear(card.year); }}
+                  style={{
+                    background: '#FFFFFF',
+                    border: border,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  {/* Icon circle */}
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: accent + '18',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, color: accent, marginBottom: 4,
+                  }}>{icon}</div>
+                  {/* Year */}
+                  <div style={{ fontSize: 22, fontWeight: 700, color: accent, lineHeight: 1 }}>{card.year}</div>
+                  {/* Age */}
+                  <div style={{ fontSize: 11, color: '#9CA3AF' }}>Age {card.age}</div>
+                  {/* Title */}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{card.title}</div>
+                  {/* Body */}
+                  <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5 }}>{card.body}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
+      {/* Withdrawal Sourcing Chart */}
+      <div style={Object.assign({}, CARD)}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+          Withdrawal Sourcing by Bucket
+        </div>
+        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
+          Annual draws from each bucket layer
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={sourcingData} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
+            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB"/>
+            <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={52}/>
+            <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
+            <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280', paddingTop: 8 }}/>
+            <Bar dataKey="b1" name="B1 Cash"   stackId="s" fill="#4A9E8E" isAnimationActive={false}/>
+            <Bar dataKey="b2" name="B2 Bonds"  stackId="s" fill="#2C5F5A" isAnimationActive={false}/>
+            <Bar dataKey="b3" name="B3 Growth" stackId="s" fill="#C8A882" isAnimationActive={false}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
       {/* Year-by-Year Detail table */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E8E4DC', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={{ fontSize: 18, fontWeight: 600, color: '#1A1A1A' }}>Year-by-Year Detail</span>
+      <div style={{
+        background: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Year-by-Year Detail</span>
           <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>Click any year for income &amp; portfolio detail</span>
         </div>
         <div ref={tableContainerRef} style={{ overflowY: 'auto', maxHeight: 560 }}>
@@ -229,11 +353,13 @@ export default function CashFlowTab({ ctx }) {
                     <th key={h.label} style={{
                       padding: '12px 14px',
                       textAlign: h.align,
-                      color: '#374151',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      background: '#F0EDE8',
-                      borderBottom: '2px solid #E8E4DC',
+                      color: '#6B7280',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: '#F9FAFB',
+                      borderBottom: '1px solid #E5E7EB',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
                       position: 'sticky',
                       top: 0,
                       zIndex: 2,
@@ -251,7 +377,7 @@ export default function CashFlowTab({ ctx }) {
                 var gapPct = totalExp > 0 ? gap / totalExp : 0;
                 var dotColor = gapPct < 0.2 ? '#3D6337' : gapPct < 0.7 ? '#8A5515' : '#8B3528';
                 var isExpanded = expandedYear === row.year;
-                var rowBg = isExpanded ? '#EFF9F7' : (i % 2 === 0 ? '#FFFFFF' : '#FAFAF8');
+                var rowBg = isExpanded ? '#F0FDF4' : (i % 2 === 0 ? '#FFFFFF' : '#FAFAFA');
 
                 return (
                   React.createElement(React.Fragment, { key: row.year },
@@ -259,7 +385,7 @@ export default function CashFlowTab({ ctx }) {
                       ref: function(el) { rowRefs.current[row.year] = el; },
                       onClick: function() { toggleRow(row.year); },
                       style: {
-                        borderBottom: isExpanded ? 'none' : '1px solid #F0EDE8',
+                        borderBottom: isExpanded ? 'none' : '1px solid #F3F4F6',
                         background: rowBg,
                         cursor: 'pointer',
                         transition: 'background 0.12s',
@@ -271,7 +397,7 @@ export default function CashFlowTab({ ctx }) {
                           display: 'inline-block',
                           marginRight: 6,
                           fontSize: 9,
-                          color: '#6B7280',
+                          color: '#9CA3AF',
                           transition: 'transform 0.18s',
                           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                         }}, '▶'),
@@ -302,7 +428,7 @@ export default function CashFlowTab({ ctx }) {
                       )
                     ),
                     isExpanded && React.createElement('tr', {
-                      style: { background: '#EFF9F7', borderBottom: '1px solid #E8E4DC' },
+                      style: { background: '#F0FDF4', borderBottom: '1px solid #E5E7EB' },
                     },
                       React.createElement('td', {
                         colSpan: 5,

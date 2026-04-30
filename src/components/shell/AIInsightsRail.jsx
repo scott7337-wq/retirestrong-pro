@@ -185,32 +185,47 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
       ],
     };
 
-    case 'cashflow': {
-      const gapYears = cf.filter(r => (r.gap || 0) > 0);
+    case 'cashflow':
+    case 'plan': {
+      const gapYears    = cf.filter(r => (r.gap || 0) > 0);
+      const fundingYrs  = cf.length;
+      const firstDraw   = cf.find(r => ((r.fromIRA || 0) + (r.fromRoth || 0) + (r.fromTaxable || 0)) > 0);
+      const lastDraw    = [...cf].reverse().find(r => ((r.fromIRA || 0) + (r.fromRoth || 0) + (r.fromTaxable || 0)) > 0);
+      const drawBefore  = firstDraw ? fmt((firstDraw.fromIRA || 0) + (firstDraw.fromRoth || 0) + (firstDraw.fromTaxable || 0)) : null;
+      const drawAfter   = firstGap  ? fmt(firstGap.gap || 0) : null;
+
       return {
         cards: [
           {
-            title: 'Cash Flow', cardType: 'status',
+            title: 'Plan Status', cardType: 'status',
             items: [
               {
-                text: firstGap
-                  ? 'Income gap starts at age ' + firstGap.age + ' — ' + fmt(firstGap.gap || 0) + '/yr'
-                  : 'No income gaps in projection',
-                highlight: true, dot: true, dotColor: firstGap ? '#D97706' : '#10B981',
+                text: 'Your retirement timeline shows ' + fundingYrs + ' years of funding with a strategic withdrawal approach.',
+                highlight: true,
               },
-              { text: gapYears.length + ' gap years total', dot: true },
-              { text: 'SS income starts at age ' + (inp.ssAge || 70), dot: true },
+              { text: 'Chart shows balance projection through retirement', dot: true },
+              drawBefore && drawAfter
+                ? { text: 'Withdrawals drop from ' + drawBefore + ' → ' + drawAfter + ' after SS starts', dot: true }
+                : { text: firstGap ? 'First income gap at age ' + firstGap.age : 'No income gaps projected', dot: true, dotColor: firstGap ? '#D97706' : '#10B981' },
+              { text: 'Critical years highlight key milestones', dot: true },
+            ].filter(Boolean),
+          },
+          {
+            title: 'Withdrawal Strategy', cardType: 'default',
+            items: [
+              { text: 'Bucket approach protects from forced selling in downturns.', highlight: true },
+              { text: 'Bucket 1: Cash for years 1–3', dot: true },
+              { text: 'Bucket 2: Bonds refill Bucket 1 annually', dot: true },
+              { text: 'Bucket 3: Growth stays invested long-term', dot: true },
             ],
           },
           {
-            title: 'Roth Opportunity', cardType: 'action',
+            title: 'Next Actions', cardType: 'action',
             items: [
-              { text: 'Convert in gap years before SS starts' },
-              { text: 'Each conversion year reduces future RMDs' },
-              { text: 'Survivor benefit makes conversions more valuable' },
+              { text: 'Refill Bucket 1 from maturing CDs' },
+              { text: 'Fill bond ladder gaps in Bucket 2' },
+              { text: 'Model SS delay to 70 for maximum benefit' },
             ],
-            action: 'Optimize my conversions',
-            onAction: () => navigateCoach('What is my optimal Roth conversion strategy given my cash flow projection?'),
           },
         ],
         quickLinks: [
