@@ -347,7 +347,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'This Year',
         items: [
-          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 8000) },
+          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 0) },
           { text: yr0.rothConv ? 'Roth conversion: ' + fmt(yr0.rothConv) : 'No Roth conversion planned yet' },
           { text: 'IRMAA headroom available — check Income & Tax tab' },
         ],
@@ -431,7 +431,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'Spending Health', priority: true,
         items: [
-          { text: 'Budget: ' + fmt(inp.monthlyExpenses || 8000) + '/mo', highlight: true, dot: true },
+          { text: 'Budget: ' + fmt(inp.monthlyExpenses || 0) + '/mo', highlight: true, dot: true },
           { text: 'Essential expenses should match guaranteed income' },
           { text: 'Discretionary is your main adjustment lever' },
         ],
@@ -494,7 +494,7 @@ function buildRailContent(activeTab, ctx, sendMessage) {
       {
         title: 'Key Assumptions', priority: true,
         items: [
-          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 8000) + ' — drives all projections', highlight: true, dot: true },
+          { text: 'Monthly expenses: ' + fmt(inp.monthlyExpenses || 0) + ' — drives all projections', highlight: true, dot: true },
           { text: 'Inflation: 3.0% (conservative)', dot: true },
           { text: 'CAPE-based return estimates applied', dot: true },
         ],

@@ -29,7 +29,7 @@ export default function OverviewPage({
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
   var sr = parseFloat(successRate) || 0;
 
-  var annualExp = (inpWithAssets.monthlyExpenses || 8000) * 12;
+  var annualExp = (inpWithAssets.monthlyExpenses || 0) * 12;
 
   // Years funded from cashFlow
   var lastFunded = 0;
@@ -52,8 +52,9 @@ export default function OverviewPage({
   var rothHeadroom = rw.yearByYear && rw.yearByYear[0] ? rw.yearByYear[0].recommended : (rw.conservative || 0);
   var rothRate = rw.yearByYear && rw.yearByYear[0] ? rw.yearByYear[0].taxRate : '12%';
 
-  // B1 alert
-  var showB1Alert = b1CovYears < 2.0;
+  // B1 alert — only show when bucket data is actually configured
+  var hasBucketData = (buckets && buckets[0] && (buckets[0].current > 0 || (buckets[0].target > 0 && buckets[0].target !== 259000)));
+  var showB1Alert = hasBucketData && b1CovYears < 2.0;
 
   // Status pills
   var planHealth = sr >= 85 ? { text: 'Strong', color: 'green' } : sr >= 70 ? { text: 'Watch', color: 'amber' } : { text: 'At Risk', color: 'red' };
@@ -75,21 +76,20 @@ export default function OverviewPage({
     ? { text: 'Well Balanced', color: 'green' }
     : { text: 'Rebalance Needed', color: 'amber' };
 
-  // Milestones
-  var curAge = inpWithAssets.currentAge || 66;
-  var retAge = inpWithAssets.retirementAge || 67;
-  var ssAge  = inpWithAssets.ssAge || 70;
-  var spouseAge = inpWithAssets.spouseCurrentAge || 63;
-  var retirementYear   = 2026 + Math.max(0, retAge - curAge);
-  var ssYear           = 2026 + Math.max(0, ssAge - curAge);
-  var spouseMedicare   = 2026 + Math.max(0, 65 - spouseAge);
-  var rmdYear          = 2026 + Math.max(0, 73 - curAge);
+  // Milestones — derived from birthYear for accuracy
+  var curYear = new Date().getFullYear();
+  var birthYr  = inpWithAssets.birthYear  || (curYear - (inpWithAssets.currentAge || 66));
+  var spouseBirthYr = inpWithAssets.spouseBirthYear || (curYear - (inpWithAssets.spouseCurrentAge || 63));
+  var retirementYear = birthYr + (inpWithAssets.retirementAge || 67);
+  var ssYear         = birthYr + (inpWithAssets.ssAge || 70);
+  var spouseMedicare = spouseBirthYr + 65;
+  var rmdYear        = birthYr + 73;
 
   var milestones = [
-    { key: 'retirement', year: retirementYear, label: 'Retirement Start', icon: CalendarDays,  isPast: retirementYear <= 2026 },
-    { key: 'ss',         year: ssYear,          label: 'Social Security',  icon: DollarSign,    isPast: ssYear <= 2026 },
-    { key: 'medicare',   year: spouseMedicare,  label: 'Spouse Medicare', icon: Heart,          isPast: spouseMedicare <= 2026 },
-    { key: 'rmd',        year: rmdYear,          label: 'RMDs Begin',      icon: BarChart2,      isPast: rmdYear <= 2026 },
+    { key: 'retirement', year: retirementYear, label: 'Retirement Start', icon: CalendarDays, isPast: retirementYear <= curYear },
+    { key: 'ss',         year: ssYear,          label: 'Social Security',  icon: DollarSign,   isPast: ssYear <= curYear },
+    { key: 'medicare',   year: spouseMedicare,  label: 'Spouse Medicare', icon: Heart,         isPast: spouseMedicare <= curYear },
+    { key: 'rmd',        year: rmdYear,          label: 'RMDs Begin',      icon: BarChart2,     isPast: rmdYear <= curYear },
   ];
 
   // Last updated timestamp
@@ -105,7 +105,7 @@ export default function OverviewPage({
   var setDrawDismissed = drawDismissedState[1];
   var currentMonthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   var firstRow = (cashFlow && cashFlow[0]) ? cashFlow[0] : {};
-  var monthlyAmt = inpWithAssets.monthlyExpenses || inp.monthlyExpenses || 8000;
+  var monthlyAmt = inpWithAssets.monthlyExpenses || inp.monthlyExpenses || 0;
   var drawSource = firstRow.fromTaxable > 0
     ? 'Taxable account (B1 sweep)'
     : firstRow.fromIRA > 0
@@ -143,7 +143,7 @@ export default function OverviewPage({
         <div style={{ fontSize: 13, color: '#9CA3AF' }}>Last updated: Today at {timeStr}</div>
       </div>
 
-      {/* KPI Strip — always first after header */}
+      {/* 1 — KPI Strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
         <KPICard
           icon={TrendingUp}
@@ -157,8 +157,8 @@ export default function OverviewPage({
           icon={Calendar}
           iconColor="#2563EB"
           topBorderColor="#2563EB"
-          label="Monthly Income"
-          value={fmtMonthly(inpWithAssets.monthlyExpenses || inp.monthlyExpenses || 8000)}
+          label="Monthly Spending"
+          value={fmtMonthly(inpWithAssets.monthlyExpenses || inp.monthlyExpenses || 0)}
           sub="Monthly spending target"
         />
         <KPICard
@@ -179,45 +179,21 @@ export default function OverviewPage({
         />
       </div>
 
-      {/* Smart Alerts — below KPIs */}
-      {(showRothAlert || showB1Alert) && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {showRothAlert && (
-            <SmartAlert
-              borderColor="#0F766E"
-              iconBg="#CCFBF1"
-              icon={DollarSign}
-              iconColor="#0F766E"
-              title="Roth Conversion Window Closing"
-              body={'Your ' + rothYear + ' tax window for optimal conversions closes in ' + rothMonthsLeft + ' months. Current headroom: ' + (fmtC || fmtShort)(rothHeadroom) + ' at ' + rothRate + ' rate.'}
-              actionLabel="Review Tax Strategy →"
-              onAction={function() { setActiveTab('roth'); }}
-            />
-          )}
-          {showB1Alert && (
-            <SmartAlert
-              borderColor="#D97706"
-              iconBg="#FEF3C7"
-              icon={ShieldAlert}
-              iconColor="#D97706"
-              title="Bucket 1 Coverage Below Target"
-              body={'Current B1 coverage: ' + b1CovYears.toFixed(1) + ' years vs. 2.5-year target. Consider refilling before year-end.'}
-              actionLabel="View Portfolio →"
-              onAction={function() { setActiveTab('buckets'); }}
-            />
-          )}
-        </div>
-      )}
+      {/* 2 — Portfolio Trajectory — full width, most important visual */}
+      <div style={{ marginBottom: 20 }}>
+        <PortfolioSparkline cashFlow={cashFlow} setActiveTab={setActiveTab} successRate={successRate} />
+      </div>
 
-      {/* This Month's Draw card */}
-      {!drawDismissed && (
+      {/* 3 — This Month's Draw */}
+      {!drawDismissed && monthlyAmt > 0 && (
         <div style={{
           background: '#FFFFFF',
           border: '1px solid #E8E4DC',
           borderLeft: '3px solid #0A4D54',
           borderRadius: 12,
           padding: '14px 16px',
-          marginBottom: 12,
+          marginBottom: 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -242,13 +218,14 @@ export default function OverviewPage({
         </div>
       )}
 
-      {/* Spending vs. Income bar */}
+      {/* 4 — Spending vs. Income */}
       <div style={{
         background: '#FFFFFF',
         border: '1px solid #E8E4DC',
         borderRadius: 12,
         padding: '16px 20px',
-        marginBottom: 20,
+        marginBottom: 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
           SPENDING VS. INCOME · {cfYear}
@@ -283,23 +260,50 @@ export default function OverviewPage({
         )}
       </div>
 
-      {/* Status Pills */}
+      {/* 5 — Status Pills */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <StatusPill label="Plan Health"    statusText={planHealth.text}    color={planHealth.color} />
         <StatusPill label="Tax Efficiency" statusText={taxEfficiency.text} color={taxEfficiency.color} />
         <StatusPill label="Bucket Status"  statusText={bucketStatus.text}  color={bucketStatus.color} />
       </div>
 
-      {/* Milestones */}
+      {/* 6 — Milestones */}
       <div style={{ marginBottom: 20 }}>
         <MilestonesRibbon milestones={milestones} />
       </div>
 
-      {/* Sparkline + What-If side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <PortfolioSparkline cashFlow={cashFlow} setActiveTab={setActiveTab} successRate={successRate} />
-        <QuickWhatIf setActiveTab={setActiveTab} />
-      </div>
+      {/* 7 — Smart Alerts (informational — bottom of page) */}
+      {(showRothAlert || showB1Alert) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          {showRothAlert && (
+            <SmartAlert
+              borderColor="#0F766E"
+              iconBg="#CCFBF1"
+              icon={DollarSign}
+              iconColor="#0F766E"
+              title="Roth Conversion Window Closing"
+              body={'Your ' + rothYear + ' tax window for optimal conversions closes in ' + rothMonthsLeft + ' months. Current headroom: ' + (fmtC || fmtShort)(rothHeadroom) + ' at ' + rothRate + ' rate.'}
+              actionLabel="Review Tax Strategy →"
+              onAction={function() { setActiveTab('roth'); }}
+            />
+          )}
+          {showB1Alert && (
+            <SmartAlert
+              borderColor="#D97706"
+              iconBg="#FEF3C7"
+              icon={ShieldAlert}
+              iconColor="#D97706"
+              title="Bucket 1 Coverage Below Target"
+              body={'Current B1 coverage: ' + b1CovYears.toFixed(1) + ' years vs. 2.5-year target. Consider refilling before year-end.'}
+              actionLabel="View Portfolio →"
+              onAction={function() { setActiveTab('buckets'); }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 8 — Quick What-If */}
+      <QuickWhatIf setActiveTab={setActiveTab} />
 
     </div>
   );
