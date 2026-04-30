@@ -4,6 +4,7 @@ import React from 'react';
 var CARD_TYPES = {
   status:  { icon: 'ℹ',  color: '#3B82F6' },
   risk:    { icon: '⚠',  color: '#EF4444' },
+  warn:    { icon: '⚠',  color: '#F59E0B' },
   action:  { icon: '✓',  color: '#10B981' },
   default: { icon: '↗',  color: '#6B7280' },
 };
@@ -155,7 +156,8 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
       };
     }
 
-    case 'buckets': return {
+    case 'buckets':
+    case 'portfolio': return {
       cards: [
         {
           title: 'Bucket Status', cardType: 'status',
@@ -166,7 +168,7 @@ function buildRailContent(activeTab, ctx, navigateCoach) {
           ],
         },
         {
-          title: 'Sequence Risk', cardType: 'default',
+          title: 'Sequence Risk', cardType: 'warn',
           items: [
             { text: '2–3 years cash in B1 protects against early downturns' },
             { text: 'Refill B1 from dividends in good years' },
