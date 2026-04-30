@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  AreaChart, Area, XAxis, YAxis,
+  ComposedChart, Area, Line, XAxis, YAxis,
   Tooltip, ReferenceLine, ResponsiveContainer
 } from 'recharts';
 
@@ -55,21 +55,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
       </div>
 
       <ResponsiveContainer width="100%" height={160}>
-        <AreaChart data={data} margin={{ top: 10, right: 16, bottom: 4, left: 0 }}>
-          <defs>
-            <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.25} />
-              <stop offset="95%" stopColor={TEAL_DARK} stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="iraGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.20} />
-              <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
-            </linearGradient>
-            <linearGradient id="rothGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={PURPLE} stopOpacity={0.15} />
-              <stop offset="95%" stopColor={PURPLE} stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
+        <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
           <YAxis
             tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -83,12 +69,18 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             labelFormatter={function(l) { return 'Age ' + l; }}
             contentStyle={{ fontSize: 11, border: '1px solid ' + BORDER, borderRadius: 6 }}
           />
-          <Area type="monotone" dataKey="total" stroke={TEAL_DARK} strokeWidth={2.5}
-            fill="url(#totalGrad)" fillOpacity={1} dot={false} activeDot={{ r: 4 }} />
-          <Area type="monotone" dataKey="ira" stroke={GREEN} strokeWidth={1.5}
-            fill="url(#iraGrad)" fillOpacity={1} dot={false} activeDot={{ r: 3 }} />
-          <Area type="monotone" dataKey="roth" stroke={PURPLE} strokeWidth={1.5}
-            strokeDasharray="4 3" fill="none" dot={false} activeDot={{ r: 3 }} />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke={TEAL_DARK}
+            fill={TEAL_DARK}
+            fillOpacity={0.07}
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 4 }}
+          />
+          <Line type="monotone" dataKey="ira"  stroke={GREEN}    strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} />
+          <Line type="monotone" dataKey="roth" stroke={PURPLE}   strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -98,14 +90,14 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
               label={{ value: 'SS', position: 'top', fontSize: 9, fill: GREEN }}
             />
           )}
-        </AreaChart>
+        </ComposedChart>
       </ResponsiveContainer>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid ' + BORDER }}>
         <div style={{ display: 'flex', gap: 14 }}>
           {[
             { color: TEAL_DARK, label: 'Total', dash: false },
-            { color: GREEN,     label: 'IRA',   dash: false },
+            { color: GREEN,     label: 'IRA',   dash: true  },
             { color: PURPLE,    label: 'Roth',  dash: true  },
           ].map(function(l) {
             return (
