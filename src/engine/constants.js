@@ -10,6 +10,15 @@ export function getRMD(age) {
   return RMD_TABLE[Math.min(age, 90)] || 12.2;
 }
 
+// SECURE Act 2.0: RMD start age depends on birth year
+// born before 1951 → 72, born 1951-1959 → 73, born 1960+ → 75
+export function getRMDStartAge(birthYear) {
+  if (!birthYear || birthYear < 1900) return 73;
+  if (birthYear < 1951) return 72;
+  if (birthYear < 1960) return 73;
+  return 75;
+}
+
 export const MFJ = [
   [23200,0.10],[94300,0.12],[201050,0.22],
   [383900,0.24],[487450,0.32],[731200,0.35],[1e12,0.37]

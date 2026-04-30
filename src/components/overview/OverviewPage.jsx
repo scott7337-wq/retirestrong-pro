@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { TrendingUp, Calendar, Shield, Clock, DollarSign, ShieldAlert } from 'lucide-react';
-import { CalendarDays, BarChart2, Heart } from 'lucide-react';
 import SmartAlert from './SmartAlert.jsx';
 import KPICard from './KPICard.jsx';
 import StatusPill from './StatusPill.jsx';
-import MilestonesRibbon from './MilestonesRibbon.jsx';
+import LeverStrip from './LeverStrip.jsx';
 import PortfolioSparkline from './PortfolioSparkline.jsx';
 import QuickWhatIf from './QuickWhatIf.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -75,22 +74,6 @@ export default function OverviewPage({
   var bucketStatus = bucketsBalanced
     ? { text: 'Well Balanced', color: 'green' }
     : { text: 'Rebalance Needed', color: 'amber' };
-
-  // Milestones — derived from birthYear for accuracy
-  var curYear = new Date().getFullYear();
-  var birthYr  = inpWithAssets.birthYear  || (curYear - (inpWithAssets.currentAge || 66));
-  var spouseBirthYr = inpWithAssets.spouseBirthYear || (curYear - (inpWithAssets.spouseCurrentAge || 63));
-  var retirementYear = birthYr + (inpWithAssets.retirementAge || 67);
-  var ssYear         = birthYr + (inpWithAssets.ssAge || 70);
-  var spouseMedicare = spouseBirthYr + 65;
-  var rmdYear        = birthYr + 73;
-
-  var milestones = [
-    { key: 'retirement', year: retirementYear, label: 'Retirement Start', icon: CalendarDays, isPast: retirementYear <= curYear },
-    { key: 'ss',         year: ssYear,          label: 'Social Security',  icon: DollarSign,   isPast: ssYear <= curYear },
-    { key: 'medicare',   year: spouseMedicare,  label: 'Spouse Medicare', icon: Heart,         isPast: spouseMedicare <= curYear },
-    { key: 'rmd',        year: rmdYear,          label: 'RMDs Begin',      icon: BarChart2,     isPast: rmdYear <= curYear },
-  ];
 
   // Last updated timestamp
   var now = new Date();
@@ -184,6 +167,11 @@ export default function OverviewPage({
         <PortfolioSparkline cashFlow={cashFlow} setActiveTab={setActiveTab} successRate={successRate} />
       </div>
 
+      {/* 3 — Lever Strip */}
+      <div style={{ marginBottom: 20 }}>
+        <LeverStrip inp={inp} inpWithAssets={inpWithAssets} successRate={successRate} cashFlow={cashFlow} setActiveTab={setActiveTab} />
+      </div>
+
       {/* 3 — This Month's Draw */}
       {!drawDismissed && monthlyAmt > 0 && (
         <div style={{
@@ -265,11 +253,6 @@ export default function OverviewPage({
         <StatusPill label="Plan Health"    statusText={planHealth.text}    color={planHealth.color} />
         <StatusPill label="Tax Efficiency" statusText={taxEfficiency.text} color={taxEfficiency.color} />
         <StatusPill label="Bucket Status"  statusText={bucketStatus.text}  color={bucketStatus.color} />
-      </div>
-
-      {/* 6 — Milestones */}
-      <div style={{ marginBottom: 20 }}>
-        <MilestonesRibbon milestones={milestones} />
       </div>
 
       {/* 7 — Smart Alerts (informational — bottom of page) */}

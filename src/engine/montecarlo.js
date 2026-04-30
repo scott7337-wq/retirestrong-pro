@@ -1,6 +1,6 @@
 // ── RetireStrong Engine: Bucket-Aware Monte Carlo Simulation ──────────────────
 import { ssIncomeForYear } from './social-security.js';
-import { getRMD } from './constants.js';
+import { getRMD, getRMDStartAge } from './constants.js';
 import { rothConvForYear } from './roth.js';
 import { resolveStatus, effectiveTax } from './tax.js';
 import { applyLeversToInp, computeYearSpending } from './levers.js';
@@ -107,7 +107,7 @@ export function runMonteCarlo(inpWithAssets, er, derivedTotals, options = {}) {
 
       // RMDs
       var iraSum2 = b1cash + b2tips + b2div + b3growth;
-      var rmd2    = (age2 >= 73 && iraSum2 > 0) ? iraSum2 / getRMD(age2) : 0;
+      var rmd2    = (age2 >= getRMDStartAge(derived.birthYear) && iraSum2 > 0) ? iraSum2 / getRMD(age2) : 0;
       var need    = Math.max(Math.max(0, exp2 - inc2), rmd2);
 
       // STEP 1: Sweep dividends from B2 → B1

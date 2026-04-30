@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getRMDStartAge } from '../../engine/constants.js';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
          ResponsiveContainer, ReferenceLine } from 'recharts';
 
@@ -129,9 +130,10 @@ export default function CashFlowTab({ ctx }) {
     var currentAge = (inp && inp.currentAge) ? Number(inp.currentAge) : 62;
     var firstYear = cashFlow[0].year;
     var lastYear = cashFlow[cashFlow.length - 1].year;
-    var rmdYear = firstYear + Math.max(0, 73 - currentAge);
+    var rmdStartAge = getRMDStartAge(inp && inp.birthYear);
+    var rmdYear = firstYear + Math.max(0, rmdStartAge - currentAge);
     if (rmdYear <= lastYear) {
-      cards.push({ year: rmdYear, label: 'RMD Trigger', sub: 'Required minimum distributions begin at 73', color: '#3D6337', bg: '#F0FDF4', border: '#BBF7D0' });
+      cards.push({ year: rmdYear, label: 'RMD Trigger', sub: 'Required minimum distributions begin at ' + rmdStartAge, color: '#3D6337', bg: '#F0FDF4', border: '#BBF7D0' });
     }
 
     return cards;

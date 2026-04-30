@@ -6,7 +6,7 @@ import { TrendingUp, DollarSign, Activity, FileText, Settings, BarChart3, Coins,
 import SettingsTab from './components/tabs/Settings';
 import AssetsTab from './components/tabs/Assets';
 import { fetchHoldings, fetchAiInsights as apiFetchAiInsights } from './api.js';
-import { RMD_TABLE, getRMD, MFJ, SGL, STD_DED, ASSET_TYPES, RISK_LEVELS, ACCOUNT_TYPES, RISK_C, TYPE_C, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, DEFAULTS } from './engine/constants.js';
+import { RMD_TABLE, getRMD, getRMDStartAge, MFJ, SGL, STD_DED, ASSET_TYPES, RISK_LEVELS, ACCOUNT_TYPES, RISK_C, TYPE_C, DEFAULT_ASSETS, DEFAULT_BUCKET_CONFIG, DEFAULTS } from './engine/constants.js';
 import { resolveStatus, marginalRate, effectiveTax, totalTaxWithState, combinedMarginalRate, capeBased } from './engine/tax.js';
 import { ssBenefitFactor, ssIncomeForYear, primarySSForYear, spouseSSForYear } from './engine/social-security.js';
 import { rothConvForYear, applyRothConversion, conversionTax, applyQCD } from './engine/roth.js';
@@ -97,7 +97,7 @@ function projectForSsAge(inp, er, ssClaimAge) {
     if (age >= inp.pensionStartAge && inp.pensionMonthly > 0) income += inp.pensionMonthly * 12;
     var gap = Math.max(0, expenses - income);
     var iraSum = iraCash + iraTips + iraDividend + iraGrowth;
-    var rmd = (age >= 73 && iraSum > 0) ? iraSum / getRMD(age) : 0;
+    var rmd = (age >= getRMDStartAge(inp.birthYear) && iraSum > 0) ? iraSum / getRMD(age) : 0;
     var need = Math.max(gap, rmd);
     var mRate = combinedMarginalRate(income + need, status, stRate);
     var withdrawn = 0;
@@ -208,7 +208,7 @@ function projectRothBridge(inp, er) {
     var totalIncome = ssInc + spSS;
     var gap = Math.max(0, expenses - totalIncome);
     var iraSum = iraCash + iraTips + iraDividend + iraGrowth;
-    var rmd = (age >= 73 && iraSum > 0) ? iraSum / getRMD(age) : 0;
+    var rmd = (age >= getRMDStartAge(inp.birthYear) && iraSum > 0) ? iraSum / getRMD(age) : 0;
     var isBridge = age < ssBridgeAge;
     b1Cash += b2DivSweep * infMult;
     var fromB1 = Math.min(b1Cash, gap);
@@ -1691,7 +1691,7 @@ export default function RetireStrongPlanner({ userId }) {
       var age = inpWithAssets.currentAge + y;
       var calYearTax = 2026 + y;
       // v12: RMD based on projected IRA balance, not starting
-      var rmd = age >= 73 && projIra > 0 ? projIra / getRMD(age) : 0;
+      var rmd = age >= getRMDStartAge(inpWithAssets.birthYear) && projIra > 0 ? projIra / getRMD(age) : 0;
       var rc = rothConvForYear(inpWithAssets, calYearTax);
       var qcd = age >= inpWithAssets.qcdStartAge ? inpWithAssets.qcdAmount : 0;
       var taxableInc = Math.max(0, rmd + rc - qcd);
@@ -1723,7 +1723,7 @@ export default function RetireStrongPlanner({ userId }) {
 
   var rothWindow = useMemo(function() {
     var curYear = 2026;
-    var rmdAge = 73;
+    var rmdAge = getRMDStartAge(inpWithAssets.birthYear);
     var rmdYear = curYear + (rmdAge - inpWithAssets.retirementAge);
     var status = resolveStatus(inpWithAssets);
     var deduction = STD_DED[status] || 29200;

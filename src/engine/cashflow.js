@@ -1,7 +1,7 @@
 // ── RetireStrong Engine: Year-by-Year Cash Flow Projection ────────────────────
 // primarySSForYear / spouseSSForYear — person-agnostic SS calculations.
 import { primarySSForYear, spouseSSForYear } from './social-security.js';
-import { getRMD } from './constants.js';
+import { getRMD, getRMDStartAge } from './constants.js';
 import { rothConvForYear } from './roth.js';
 import { resolveStatus, effectiveTax, combinedMarginalRate } from './tax.js';
 import { applyLeversToInp, computeYearSpending } from './levers.js';
@@ -63,7 +63,7 @@ export function buildCashFlow(inpWithAssets, er, options = {}) {
 
     var gap    = Math.max(0, expenses - income);
     var iraSum = iraCash + iraTips + iraDividend + iraGrowth;
-    var rmd    = (age >= 73 && iraSum > 0) ? iraSum / getRMD(age) : 0;
+    var rmd    = (age >= getRMDStartAge(derived.birthYear) && iraSum > 0) ? iraSum / getRMD(age) : 0;
     var need   = Math.max(gap, rmd);
     var mRate  = combinedMarginalRate(income + need, status, stRate);
 

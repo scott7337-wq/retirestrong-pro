@@ -140,6 +140,22 @@ export default function Settings(props) {
                   </div>
                 </div>
               )}
+              {section.title === 'Expense Breakdown' && (function() {
+                var subFieldSum = (inp.housingMonthly || 0) + (inp.foodMonthly || 0) + (inp.transportMonthly || 0) + (inp.travelMonthly || 0) + (inp.otherMonthly || 0);
+                var totalExp = inp.monthlyExpenses || 0;
+                var diff = Math.abs(subFieldSum - totalExp);
+                if (diff > 10 && totalExp > 0) {
+                  return (
+                    <div style={{ marginBottom: 12, padding: '8px 10px', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: 7 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#D97706', marginBottom: 2 }}>Sub-fields don't match Monthly Expenses</div>
+                      <div style={{ fontSize: 10, color: '#92400E', lineHeight: 1.4 }}>
+                        Sub-fields sum to ${subFieldSum.toLocaleString()}/mo vs ${totalExp.toLocaleString()}/mo above. The projection uses Monthly Expenses — update sub-fields to match for accurate breakdowns.
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               {section.isPortfolioSummary ? (
                 <div>
                   <div style={{background:SURFACE2,border:'1px solid #1e3a5f',borderRadius:10,padding:14,marginBottom:8}}>
