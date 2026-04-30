@@ -78,9 +78,10 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             strokeWidth={2.5}
             dot={false}
             activeDot={{ r: 4 }}
+            isAnimationActive={false}
           />
-          <Line type="monotone" dataKey="ira"  stroke={GREEN}    strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} />
-          <Line type="monotone" dataKey="roth" stroke={PURPLE}   strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} />
+          <Line type="monotone" dataKey="ira"  stroke={GREEN}    strokeWidth={1.5} strokeDasharray="4 2" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+          <Line type="monotone" dataKey="roth" stroke={PURPLE}   strokeWidth={1.5} strokeDasharray="2 3" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
           {ssAge && (
             <ReferenceLine
               x={ssAge}

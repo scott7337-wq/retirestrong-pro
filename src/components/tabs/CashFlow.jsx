@@ -164,10 +164,10 @@ export default function CashFlowTab({ ctx }) {
             <Tooltip content={<TTip/>}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280' }}/>
             <ReferenceLine x={2029} stroke="#3D6337" strokeDasharray="4 4" label={{ value: 'SS starts', position: 'top', fontSize: 9, fill: '#3D6337' }}/>
-            <Area type="monotone" dataKey="balance"     stroke="#0A4D54" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1}/>
-            <Area type="monotone" dataKey="iraBalance"  stroke="#3D6337" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1}/>
-            <Area type="monotone" dataKey="rothBalance" stroke="#4A9E8E" fill="url(#gr)" strokeWidth={1.5} name="Roth Balance"  fillOpacity={1}/>
-            <Area type="monotone" dataKey="expenses"    stroke="#8B3528" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1}/>
+            <Area type="monotone" dataKey="balance"     stroke="#0A4D54" fill="url(#gb)" strokeWidth={2.5} name="Total Balance" fillOpacity={1} isAnimationActive={false}/>
+            <Area type="monotone" dataKey="iraBalance"  stroke="#3D6337" fill="url(#gi)" strokeWidth={1.5} name="IRA Balance"   fillOpacity={1} isAnimationActive={false}/>
+            <Area type="monotone" dataKey="rothBalance" stroke="#4A9E8E" fill="url(#gr)" strokeWidth={1.5} name="Roth Balance"  fillOpacity={1} isAnimationActive={false}/>
+            <Area type="monotone" dataKey="expenses"    stroke="#8B3528" fill="url(#ge)" strokeWidth={1.5} name="Expenses"      fillOpacity={1} isAnimationActive={false}/>
           </AreaChart>
         </ResponsiveContainer>
       </div>
