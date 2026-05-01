@@ -456,16 +456,6 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
                 data={chartData}
                 margin={{ top: 4, right: 4, bottom: 4, left: 0 }}
               >
-                <defs>
-                  <linearGradient id="coachTotalGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={COLORS.tealDark} stopOpacity={0.15} />
-                    <stop offset="95%" stopColor={COLORS.tealDark} stopOpacity={0.03} />
-                  </linearGradient>
-                  <linearGradient id="coachIraGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#3D6337" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#3D6337" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
                 <XAxis
                   dataKey="age"
                   tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -485,14 +475,14 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
                   }}
                 />
                 <Area type="monotone" dataKey="total"
-                  stroke={COLORS.tealDark} fill="url(#coachTotalGrad)" fillOpacity={1}
-                  strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+                  stroke="#8A5515" fill="#8A5515" fillOpacity={1}
+                  strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
                 <Area type="monotone" dataKey="ira"
-                  stroke="#3D6337" fill="url(#coachIraGrad)" fillOpacity={1}
+                  stroke="#3D6337" fill="#3D6337" fillOpacity={1}
                   strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
-                <Line type="monotone" dataKey="roth"
-                  stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="3 3"
-                  dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+                <Area type="monotone" dataKey="roth"
+                  stroke="#4A9E8E" fill="#4A9E8E" fillOpacity={1}
+                  strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
             <div style={{
@@ -500,9 +490,9 @@ function ContextPanel({ ctx, activeScenarioId, workingScenario, namedScenarios, 
               paddingTop: 8, borderTop: '1px solid ' + COLORS.border,
             }}>
               {[
-                { color: COLORS.tealDark, label: 'Total', dash: false },
-                { color: '#3D6337',       label: 'IRA',   dash: false },
-                { color: '#7C3AED',       label: 'Roth',  dash: true },
+                { color: '#8A5515', label: 'Taxable', dash: false },
+                { color: '#3D6337', label: 'IRA',     dash: false },
+                { color: '#4A9E8E', label: 'Roth',    dash: false },
               ].map(l => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <svg width="16" height="4">

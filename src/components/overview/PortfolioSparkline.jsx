@@ -56,16 +56,6 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
 
       <ResponsiveContainer width="100%" height={160}>
         <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
-          <defs>
-            <linearGradient id="psTotalGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={TEAL_DARK} stopOpacity={0.15} />
-              <stop offset="95%" stopColor={TEAL_DARK} stopOpacity={0.03} />
-            </linearGradient>
-            <linearGradient id="psIraGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={GREEN} stopOpacity={0.12} />
-              <stop offset="95%" stopColor={GREEN} stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
           <XAxis dataKey="age" tick={{ fontSize: 10, fill: '#6B7280' }} tickLine={false} axisLine={false} interval={4} />
           <YAxis
             tick={{ fontSize: 10, fill: '#6B7280' }}
@@ -82,10 +72,10 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
           <Area
             type="monotone"
             dataKey="total"
-            stroke={TEAL_DARK}
-            fill="url(#psTotalGrad)"
+            stroke="#8A5515"
+            fill="#8A5515"
             fillOpacity={1}
-            strokeWidth={2.5}
+            strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
             isAnimationActive={false}
@@ -93,15 +83,25 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
           <Area
             type="monotone"
             dataKey="ira"
-            stroke={GREEN}
-            fill="url(#psIraGrad)"
+            stroke="#3D6337"
+            fill="#3D6337"
             fillOpacity={1}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 3 }}
             isAnimationActive={false}
           />
-          <Line type="monotone" dataKey="roth" stroke={PURPLE} strokeWidth={1.5} strokeDasharray="3 3" dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+          <Area
+            type="monotone"
+            dataKey="roth"
+            stroke="#4A9E8E"
+            fill="#4A9E8E"
+            fillOpacity={1}
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 3 }}
+            isAnimationActive={false}
+          />
           {ssAge && (
             <ReferenceLine
               x={ssAge}
@@ -117,9 +117,9 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: '1px solid ' + BORDER }}>
         <div style={{ display: 'flex', gap: 14 }}>
           {[
-            { color: TEAL_DARK, label: 'Total', dash: false },
-            { color: GREEN,     label: 'IRA',   dash: false },
-            { color: PURPLE,    label: 'Roth',  dash: true  },
+            { color: '#8A5515', label: 'Taxable', dash: false },
+            { color: '#3D6337', label: 'IRA',     dash: false },
+            { color: '#4A9E8E', label: 'Roth',    dash: false },
           ].map(function(l) {
             return (
               <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
