@@ -102,7 +102,7 @@ export default function MonteCarloTab({ ctx }) {
             <Tooltip content={<TTip/>}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368' }}/>
             {[['p90','#4A9E8E','gp90','90th %ile'],['p75','#3D6337','gp75','75th %ile'],['p50','#0A4D54','gp50','Median'],['p25','#8A5515','gp25','25th %ile'],['p10','#8B3528','gp10','10th %ile']].map(function(s) {
-              return <Area key={s[0]} type="monotone" dataKey={s[0]} stroke={s[1]} fill={'url(#' + s[2] + ')'} strokeWidth={s[0] === 'p50' ? 2.5 : 1.5} name={s[3]} fillOpacity={1} isAnimationActive={false}/>;
+              return <Area key={s[0]} type="monotone" dataKey={s[0]} stroke={s[1]} fill={'url(#' + s[2] + ')'} strokeWidth={s[0] === 'p50' ? 2.5 : 1.5} name={s[3]} fillOpacity={1} style={{ fillOpacity: 1 }} isAnimationActive={false}/>;
             })}
           </AreaChart>
         </ResponsiveContainer>
@@ -130,9 +130,9 @@ export default function MonteCarloTab({ ctx }) {
               <YAxis tickFormatter={fmtC} stroke={BORDER2} tick={{ fontSize: 10, fill: '#5F6368' }}/>
               <Tooltip content={<TTip/>}/>
               <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368' }}/>
-              <Area type="monotone" dataKey="b1" stroke="#4A9E8E" fill="url(#gb1)" strokeWidth={2} name="Bucket 1 (Cash)"   fillOpacity={1} isAnimationActive={false}/>
-              <Area type="monotone" dataKey="b2" stroke="#3D6337" fill="url(#gb2)" strokeWidth={2} name="Bucket 2 (Income)" fillOpacity={1} isAnimationActive={false}/>
-              <Area type="monotone" dataKey="b3" stroke="#0A4D54" fill="url(#gb3)" strokeWidth={2} name="Bucket 3 (Growth)" fillOpacity={1} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b1" stroke="#4A9E8E" fill="url(#gb1)" strokeWidth={2} name="Bucket 1 (Cash)"   fillOpacity={1} style={{ fillOpacity: 1 }} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b2" stroke="#3D6337" fill="url(#gb2)" strokeWidth={2} name="Bucket 2 (Income)" fillOpacity={1} style={{ fillOpacity: 1 }} isAnimationActive={false}/>
+              <Area type="monotone" dataKey="b3" stroke="#0A4D54" fill="url(#gb3)" strokeWidth={2} name="Bucket 3 (Growth)" fillOpacity={1} style={{ fillOpacity: 1 }} isAnimationActive={false}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>

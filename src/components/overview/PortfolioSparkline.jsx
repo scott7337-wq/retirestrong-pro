@@ -75,6 +75,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             stroke="#8A5515"
             fill="#8A5515"
             fillOpacity={1}
+            style={{ fillOpacity: 1 }}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -86,6 +87,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             stroke="#3D6337"
             fill="#3D6337"
             fillOpacity={1}
+            style={{ fillOpacity: 1 }}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 3 }}
@@ -97,6 +99,7 @@ export default function PortfolioSparkline({ cashFlow, setActiveTab, successRate
             stroke="#4A9E8E"
             fill="#4A9E8E"
             fillOpacity={1}
+            style={{ fillOpacity: 1 }}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 3 }}
