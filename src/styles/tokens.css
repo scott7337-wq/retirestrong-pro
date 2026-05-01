@@ -93,3 +93,13 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.6; transform: scale(1.3); }
 }
+
+/* Force solid fills on all Recharts stacked areas */
+.recharts-area-area {
+  fill-opacity: 1 !important;
+}
+
+/* Keep bar fills solid */
+.recharts-bar-rectangle path {
+  fill-opacity: 1 !important;
+}
