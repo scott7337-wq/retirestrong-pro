@@ -13,8 +13,8 @@ import React from 'react';
  * <StatusBadge status="success|warning|danger">text</StatusBadge>
  */
 
-var BASE_SHADOW   = '0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)';
-var STRONG_SHADOW = '0 2px 8px rgba(10,77,84,0.10), 0 1px 3px rgba(0,0,0,0.06)';
+var BASE_SHADOW   = '0 1px 3px rgba(0,0,0,0.08)';
+var STRONG_SHADOW = '0 2px 8px rgba(0,0,0,0.10)';
 
 var ACCENT_COLORS = {
   success: '#3D6337',
@@ -39,10 +39,10 @@ export function Card({ children, priority, accent, padding, style, ...props }) {
   return (
     <div
       style={Object.assign({
-        background: '#FFFFFF',
-        border: '1px solid #E8E4DC',
+        background: '#FCFBF8',
+        border: '1px solid #D4D1C5',
         borderTop: borderTop,
-        borderRadius: '12px',
+        borderRadius: '8px',
         boxShadow: (accentColor || priority) ? STRONG_SHADOW : BASE_SHADOW,
         padding: pd,
       }, style || {})}

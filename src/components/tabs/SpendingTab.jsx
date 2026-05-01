@@ -10,7 +10,7 @@ export default function SpendingTab({ ctx }) {
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
-  var CARD        = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD        = { background: '#FCFBF8', border: '1px solid #D4D1C5', borderTop: '3px solid #0A4D54', borderRadius: '8px', padding: '20px', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' };
   var CARD_OK     = Object.assign({}, CARD, { borderTop: '3px solid #3D6337' });
   var CARD_WARN   = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
   var CARD_DANGER = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });
@@ -223,7 +223,7 @@ export default function SpendingTab({ ctx }) {
                 { label: 'Budget/Month', value: fmtC(inpWithAssets.monthlyExpenses), color: '#6B7280' },
               ].map(function(item) {
                 return (
-                  <div key={item.label} style={{ background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid ' + item.color, borderRadius: '12px', padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                  <div key={item.label} style={{ background: '#FCFBF8', border: '1px solid #D4D1C5', borderTop: '3px solid ' + item.color, borderRadius: '8px', padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
                     <div style={{ fontSize: 22, color: item.color, fontWeight: 700 }}>{item.value}</div>
                     <div style={{ fontSize: 11, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>{item.label}</div>
                   </div>

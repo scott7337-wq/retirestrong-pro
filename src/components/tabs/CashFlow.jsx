@@ -8,11 +8,11 @@ import {
 } from 'recharts';
 
 var CARD = {
-  background: '#FFFFFF',
-  border: '1px solid #E5E7EB',
+  background: '#FCFBF8',
+  border: '1px solid #D4D1C5',
   borderRadius: '8px',
   padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
   marginBottom: 20,
 };
 
@@ -65,20 +65,20 @@ function DetailSection({ row, fmtC }) {
       {/* Source-of-funds bar */}
       {(ssPct + otherPct + portPct) > 0 && (
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Source of Funds</div>
+          <div style={{ fontSize: 10, color: '#5F6368', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Source of Funds</div>
           <div style={{ display: 'flex', height: 14, borderRadius: 4, overflow: 'hidden', gap: 1, marginBottom: 5 }}>
             {ssPct > 0 && <div style={{ width: ssPct + '%', background: '#0A4D54', borderRadius: 4 }}/>}
             {otherPct > 0 && <div style={{ width: otherPct + '%', background: '#60a5fa', borderRadius: 4 }}/>}
             {portPct > 0 && <div style={{ width: portPct + '%', background: '#f59e0b', borderRadius: 4 }}/>}
           </div>
-          <div style={{ display: 'flex', gap: 12, fontSize: 10, color: '#6B7280' }}>
+          <div style={{ display: 'flex', gap: 12, fontSize: 10, color: '#5F6368' }}>
             {ssPct > 0 && <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#0A4D54', marginRight: 3 }}/>SS/Pension {ssPct.toFixed(0)}%</span>}
             {otherPct > 0 && <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#60a5fa', marginRight: 3 }}/>Other {otherPct.toFixed(0)}%</span>}
             {portPct > 0 && <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#f59e0b', marginRight: 3 }}/>Portfolio {portPct.toFixed(0)}%</span>}
           </div>
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 12, color: '#6B7280', lineHeight: 1.6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 12, color: '#5F6368', lineHeight: 1.6 }}>
         {items.map(function(item) {
           return (
             <div key={item[0]}>
@@ -202,40 +202,40 @@ export default function CashFlowTab({ ctx }) {
   });
 
   return (
-    <div style={{ padding: '24px 28px', background: '#F9FAFB', minHeight: '100%' }}>
+    <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
 
       {/* Page Header */}
-      <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>Plan</h1>
-      <p style={{ fontSize: 14, color: '#6B7280', marginBottom: 24 }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, color: '#222222', margin: '0 0 4px', fontFamily: "'Source Serif 4', Georgia, serif" }}>Plan</h1>
+      <p style={{ fontSize: 14, color: '#5F6368', marginBottom: 24 }}>
         {'Your retirement is funded through age ' + fundedAge + ' with strategic bucket withdrawals and Social Security.'}
       </p>
 
       {/* Main Chart — Retirement Timeline & Balance Projection */}
       <div style={Object.assign({}, CARD)}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#222222', marginBottom: 4 }}>
           Retirement Timeline &amp; Balance Projection
         </div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: '#5F6368', marginBottom: 16 }}>
           Portfolio balance vs. annual withdrawals
         </div>
         <ResponsiveContainer width="100%" height={260}>
           <ComposedChart data={chartData} margin={{ top: 10, right: 48, bottom: 4, left: 8 }}>
             <defs>
               <linearGradient id="cfBalGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#2C5F5A" stopOpacity={0.18}/>
-                <stop offset="95%" stopColor="#2C5F5A" stopOpacity={0.02}/>
+                <stop offset="5%"  stopColor="#0A4D54" stopOpacity={0.18}/>
+                <stop offset="95%" stopColor="#0A4D54" stopOpacity={0.02}/>
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6"/>
-            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB"/>
-            <YAxis yAxisId="left"  tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={56}/>
-            <YAxis yAxisId="right" orientation="right" tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={52}/>
+            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5"/>
+            <YAxis yAxisId="left"  tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5" width={56}/>
+            <YAxis yAxisId="right" orientation="right" tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5" width={52}/>
             <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
-            <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280', paddingTop: 8 }}/>
-            <Bar yAxisId="right" dataKey="portfolioWithdrawal" name="Portfolio Withdrawal" fill="#C8A882" maxBarSize={18} isAnimationActive={false}/>
+            <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368', paddingTop: 8 }}/>
+            <Bar yAxisId="right" dataKey="portfolioWithdrawal" name="Portfolio Withdrawal" fill="#8A5515" maxBarSize={18} isAnimationActive={false}/>
             <Bar yAxisId="right" dataKey="ssIncome"            name="Social Security"      fill="#3D6337" maxBarSize={18} isAnimationActive={false}/>
             <Area yAxisId="left" type="monotone" dataKey="balance" name="Total Balance"
-              stroke="#2C5F5A" fill="url(#cfBalGrad)" strokeWidth={2.5}
+              stroke="#0A4D54" fill="url(#cfBalGrad)" strokeWidth={2.5}
               fillOpacity={1} isAnimationActive={false}/>
           </ComposedChart>
         </ResponsiveContainer>
@@ -285,11 +285,11 @@ export default function CashFlowTab({ ctx }) {
                   {/* Year */}
                   <div style={{ fontSize: 22, fontWeight: 700, color: accent, lineHeight: 1 }}>{card.year}</div>
                   {/* Age */}
-                  <div style={{ fontSize: 11, color: '#9CA3AF' }}>Age {card.age}</div>
+                  <div style={{ fontSize: 11, color: '#5F6368' }}>Age {card.age}</div>
                   {/* Title */}
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{card.title}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#222222' }}>{card.title}</div>
                   {/* Body */}
-                  <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5 }}>{card.body}</div>
+                  <div style={{ fontSize: 12, color: '#5F6368', lineHeight: 1.5 }}>{card.body}</div>
                 </button>
               );
             })}
@@ -299,37 +299,37 @@ export default function CashFlowTab({ ctx }) {
 
       {/* Withdrawal Sourcing Chart */}
       <div style={Object.assign({}, CARD)}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#222222', marginBottom: 4 }}>
           Withdrawal Sourcing by Bucket
         </div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: '#5F6368', marginBottom: 16 }}>
           Annual draws from each bucket layer
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={sourcingData} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
-            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB"/>
-            <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#9CA3AF' }} stroke="#E5E7EB" width={52}/>
+            <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5"/>
+            <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5" width={52}/>
             <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
-            <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280', paddingTop: 8 }}/>
+            <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368', paddingTop: 8 }}/>
             <Bar dataKey="b1" name="B1 Cash"   stackId="s" fill="#4A9E8E" isAnimationActive={false}/>
-            <Bar dataKey="b2" name="B2 Bonds"  stackId="s" fill="#2C5F5A" isAnimationActive={false}/>
-            <Bar dataKey="b3" name="B3 Growth" stackId="s" fill="#C8A882" isAnimationActive={false}/>
+            <Bar dataKey="b2" name="B2 Bonds"  stackId="s" fill="#3D6337" isAnimationActive={false}/>
+            <Bar dataKey="b3" name="B3 Growth" stackId="s" fill="#8A5515" isAnimationActive={false}/>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Year-by-Year Detail table */}
       <div style={{
-        background: '#FFFFFF',
-        border: '1px solid #E5E7EB',
+        background: '#FCFBF8',
+        border: '1px solid #D4D1C5',
         borderRadius: '8px',
         overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Year-by-Year Detail</span>
-          <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>Click any year for income &amp; portfolio detail</span>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #D4D1C5', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#222222' }}>Year-by-Year Detail</span>
+          <span style={{ fontSize: 12, color: '#5F6368', fontStyle: 'italic' }}>Click any year for income &amp; portfolio detail</span>
         </div>
         <div ref={tableContainerRef} style={{ overflowY: 'auto', maxHeight: 560 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
@@ -353,11 +353,11 @@ export default function CashFlowTab({ ctx }) {
                     <th key={h.label} style={{
                       padding: '12px 14px',
                       textAlign: h.align,
-                      color: '#6B7280',
+                      color: '#5F6368',
                       fontSize: 11,
                       fontWeight: 700,
-                      background: '#F9FAFB',
-                      borderBottom: '1px solid #E5E7EB',
+                      background: '#F5F3EF',
+                      borderBottom: '1px solid #D4D1C5',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       position: 'sticky',
@@ -397,7 +397,7 @@ export default function CashFlowTab({ ctx }) {
                           display: 'inline-block',
                           marginRight: 6,
                           fontSize: 9,
-                          color: '#9CA3AF',
+                          color: '#5F6368',
                           transition: 'transform 0.18s',
                           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
                         }}, '▶'),
@@ -408,7 +408,7 @@ export default function CashFlowTab({ ctx }) {
                         (fmtC || fmtShort)(row.balance)
                       ),
                       /* INCOME */
-                      React.createElement('td', { style: { padding: '11px 14px', textAlign: 'right', color: income > 0 ? '#3D6337' : '#9CA3AF', fontSize: 14, fontWeight: 500 }},
+                      React.createElement('td', { style: { padding: '11px 14px', textAlign: 'right', color: income > 0 ? '#3D6337' : '#5F6368', fontSize: 14, fontWeight: 500 }},
                         income > 0 ? (fmtC || fmtShort)(income) : '—'
                       ),
                       /* EXPENSES */
@@ -424,11 +424,11 @@ export default function CashFlowTab({ ctx }) {
                             )
                           : gap < 0
                           ? React.createElement('span', { style: { color: '#3D6337', fontWeight: 500 }}, '↑ ' + (fmtC || fmtShort)(Math.abs(gap)))
-                          : React.createElement('span', { style: { color: '#9CA3AF' }}, '—')
+                          : React.createElement('span', { style: { color: '#5F6368' }}, '—')
                       )
                     ),
                     isExpanded && React.createElement('tr', {
-                      style: { background: '#F0FDF4', borderBottom: '1px solid #E5E7EB' },
+                      style: { background: '#F0FDF4', borderBottom: '1px solid #D4D1C5' },
                     },
                       React.createElement('td', {
                         colSpan: 5,

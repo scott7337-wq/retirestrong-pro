@@ -17,15 +17,15 @@ function InsightCard({ title, items, action, onAction, cardType }) {
 
   return (
     <div style={{
-      background: '#FFFFFF',
-      border: '1px solid #E5E7EB',
+      background: '#FCFBF8',
+      border: '1px solid #D4D1C5',
       borderRadius: '8px',
       padding: '16px',
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 15, color: t.color, fontWeight: 700, lineHeight: 1 }}>{t.icon}</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{title}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#222222' }}>{title}</span>
       </div>
 
       {/* Items */}
@@ -36,12 +36,12 @@ function InsightCard({ title, items, action, onAction, cardType }) {
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{
                   width: 20, height: 20, minWidth: 20, borderRadius: '50%',
-                  background: '#111827', color: '#FFFFFF',
+                  background: '#222222', color: '#FFFFFF',
                   fontSize: 11, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}>{i + 1}</div>
-                <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{item.text}</span>
+                <span style={{ fontSize: 13, color: '#222222', lineHeight: 1.5 }}>{item.text}</span>
               </div>
             );
           }
@@ -73,7 +73,7 @@ function InsightCard({ title, items, action, onAction, cardType }) {
         ) : (
           <button onClick={onAction} style={{
             background: 'none', border: '1px solid #D1D5DB', borderRadius: 6,
-            padding: '6px 12px', fontSize: 12, color: '#374151',
+            padding: '6px 12px', fontSize: 12, color: '#222222',
             cursor: 'pointer', marginTop: 8,
           }}>{action} →</button>
         )
@@ -409,8 +409,8 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
       width: 280,
       minWidth: 280,
       flexShrink: 0,
-      background: '#FFFFFF',
-      borderLeft: '1px solid #E5E7EB',
+      background: '#F5F3EF',
+      borderLeft: '1px solid #D4D1C5',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
@@ -420,11 +420,11 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
       <div style={{
         flexShrink: 0,
         padding: '16px 16px 12px',
-        borderBottom: '1px solid #E5E7EB',
+        borderBottom: '1px solid #D4D1C5',
       }}>
         <span style={{
           fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-          color: '#374151', textTransform: 'uppercase',
+          color: '#222222', textTransform: 'uppercase',
         }}>
           AI INSIGHTS
         </span>
@@ -452,7 +452,7 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
         {quickLinks.length > 0 && (
           <div style={{ marginTop: 4 }}>
             <div style={{
-              fontSize: 10, fontWeight: 700, color: '#9CA3AF',
+              fontSize: 10, fontWeight: 700, color: '#5F6368',
               textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6,
             }}>
               Quick questions
@@ -478,14 +478,14 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
 
       {/* Footer */}
       <div style={{
-        flexShrink: 0, borderTop: '1px solid #E5E7EB',
+        flexShrink: 0, borderTop: '1px solid #D4D1C5',
         padding: '12px', background: '#FFFFFF',
         display: 'flex', flexDirection: 'column', gap: 8,
       }}>
         <button
           onClick={function() { navigateCoach(null); }}
           style={{
-            background: '#111827', color: '#FFFFFF',
+            background: '#222222', color: '#FFFFFF',
             border: 'none', borderRadius: 8,
             padding: '10px 14px', fontSize: 13, fontWeight: 600,
             cursor: 'pointer', width: '100%', textAlign: 'center',
@@ -493,7 +493,7 @@ export default function AIInsightsRail({ activeTab = 'dashboard', ctx, setActive
         >
           Open Coach for Q&amp;A →
         </button>
-        <div style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 10, color: '#5F6368', textAlign: 'center', lineHeight: 1.4 }}>
           This is education, not investment advice.
         </div>
       </div>

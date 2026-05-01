@@ -5,29 +5,29 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 // ── Style constants ───────────────────────────────────────────────────────────
 var CARD = {
-  background: '#FFFFFF',
-  border: '1px solid #E5E7EB',
+  background: '#FCFBF8',
+  border: '1px solid #D4D1C5',
   borderRadius: '8px',
   padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
   marginBottom: 16,
 };
 
 // ── Color maps ────────────────────────────────────────────────────────────────
 var COMP_COLORS = {
   'Cash & Near-Cash': '#4A9E8E',
-  'TIPS / Inflation':  '#2C5F5A',
-  'Dividend/REIT':     '#8A5515',
-  'Equity ETF':        '#C8A882',
-  'International':     '#6B8FA8',
-  'Roth Assets':       '#553C9A',
-  'Other':             '#6B7280',
+  'TIPS / Inflation':  '#0A4D54',
+  'Dividend/REIT':     '#3D6337',
+  'Equity ETF':        '#8A5515',
+  'International':     '#5F6368',
+  'Roth Assets':       '#4A9E8E',
+  'Other':             '#5F6368',
 };
 
 var BUCKET_CFG = [
   { id: 1, label: 'Bucket 1', sub: 'Cash & Equivalents',   horizon: '0–3 years spending horizon',  color: '#4A9E8E' },
-  { id: 2, label: 'Bucket 2', sub: 'Bonds & Fixed Income',  horizon: '3–10 years spending horizon', color: '#2C5F5A' },
-  { id: 3, label: 'Bucket 3', sub: 'Growth Equity',         horizon: '10+ years spending horizon',  color: '#C8A882' },
+  { id: 2, label: 'Bucket 2', sub: 'Bonds & Fixed Income',  horizon: '3–10 years spending horizon', color: '#3D6337' },
+  { id: 3, label: 'Bucket 3', sub: 'Growth Equity',         horizon: '10+ years spending horizon',  color: '#8A5515' },
 ];
 
 var ACCOUNT_DISPLAY = {

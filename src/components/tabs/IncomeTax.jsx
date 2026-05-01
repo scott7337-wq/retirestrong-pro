@@ -10,7 +10,7 @@ export default function IncomeTaxTab({ ctx }) {
   var authUser = authCtx ? authCtx.user : null;
   var planLabel = (authUser && authUser.name) ? authUser.name : 'Your Plan';
 
-  var CARD     = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+  var CARD     = { background: '#FCFBF8', border: '1px solid #D4D1C5', borderTop: '3px solid #0A4D54', borderRadius: '8px', padding: '20px', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' };
   var CARD_TAX = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
   var CARD_RED = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });
 

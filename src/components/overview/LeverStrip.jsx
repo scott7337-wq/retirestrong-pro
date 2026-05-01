@@ -146,8 +146,8 @@ export default function LeverStrip({ inp, inpWithAssets, successRate, cashFlow, 
   return (
     <div>
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>Levers to Improve Your Plan</div>
-        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#222222' }}>Levers to Improve Your Plan</div>
+        <div style={{ fontSize: 13, color: '#5F6368', marginTop: 4 }}>
           Use these strategies to increase your success rate and extend portfolio longevity
         </div>
       </div>
@@ -169,11 +169,11 @@ export default function LeverStrip({ inp, inpWithAssets, successRate, cashFlow, 
 function LeverCard({ lv, onNavigateCoach }) {
   return (
     <div style={{
-      background: '#FFFFFF',
-      border: '1px solid #E5E7EB',
+      background: '#FCFBF8',
+      border: '1px solid #D4D1C5',
       borderRadius: '8px',
       padding: '16px 20px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       display: 'flex',
       flexDirection: 'column',
     }}>
@@ -181,15 +181,15 @@ function LeverCard({ lv, onNavigateCoach }) {
       <div style={{ fontSize: 18, marginBottom: 8 }}>{lv.icon}</div>
 
       {/* Title */}
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 6 }}>{lv.title}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#222222', marginBottom: 6 }}>{lv.title}</div>
 
       {/* Description */}
-      <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5, marginBottom: 10, flex: 1 }}>{lv.description}</div>
+      <div style={{ fontSize: 13, color: '#5F6368', lineHeight: 1.5, marginBottom: 10, flex: 1 }}>{lv.description}</div>
 
       {/* Impact text */}
       <div style={{
         fontSize: 12, fontWeight: 500, marginBottom: 12,
-        color: lv.impact === 'high' ? '#DC2626' : '#6B7280',
+        color: lv.impact === 'high' ? '#DC2626' : '#5F6368',
       }}>
         {lv.impact === 'high' ? '↑ High impact' : '→ Medium impact'}
       </div>
@@ -201,11 +201,11 @@ function LeverCard({ lv, onNavigateCoach }) {
         onMouseLeave={function(e) { e.currentTarget.style.background = 'transparent'; }}
         style={{
           background: 'transparent',
-          border: '1px solid #D1D5DB',
+          border: '1px solid #D4D1C5',
           borderRadius: '6px',
           padding: '6px 14px',
           fontSize: 13,
-          color: '#374151',
+          color: '#222222',
           cursor: 'pointer',
           fontFamily: 'inherit',
           width: '100%',

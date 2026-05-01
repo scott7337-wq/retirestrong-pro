@@ -51,8 +51,8 @@ import { useChatSession } from '../../hooks/useChatSession.js';
 
 const COLORS = {
   bg:           '#F5F3EF',
-  border:       '#E8E4DC',
-  cardBg:       '#FFFFFF',
+  border:       '#D4D1C5',
+  cardBg:       '#FCFBF8',
   tealDark:     '#0A4D54',
   tealMid:      '#4A9E8E',
   tealLight:    '#E8F5F2',
@@ -66,7 +66,7 @@ const COLORS = {
   green:        '#3D6337',
 };
 
-const CARD        = { background: '#FFFFFF', border: '1px solid #E8E4DC', borderTop: '3px solid #0A4D54', borderRadius: '12px', padding: '20px', marginBottom: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' };
+const CARD        = { background: '#FCFBF8', border: '1px solid #D4D1C5', borderTop: '3px solid #0A4D54', borderRadius: '8px', padding: '20px', marginBottom: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' };
 const CARD_OK     = Object.assign({}, CARD, { borderTop: '3px solid #3D6337' });
 const CARD_WARN   = Object.assign({}, CARD, { borderTop: '3px solid #8A5515' });
 const CARD_DANGER = Object.assign({}, CARD, { borderTop: '3px solid #8B3528' });

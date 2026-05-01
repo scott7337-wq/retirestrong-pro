@@ -11,8 +11,8 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 // ── Style constants ──────────────────────────────────────────────────────────
 var CARD = {
-  background: '#FFFFFF',
-  border: '1px solid #E5E7EB',
+  background: '#FCFBF8',
+  border: '1px solid #D4D1C5',
   borderRadius: '8px',
   padding: '20px',
   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
@@ -142,15 +142,15 @@ export default function OverviewPage({
   });
 
   return (
-    <div style={{ padding: '24px 28px', background: '#F9FAFB', minHeight: '100%' }}>
+    <div style={{ padding: '24px 28px', background: '#F5F3EF', minHeight: '100%' }}>
 
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Overview</h1>
-          <div style={{ fontSize: 14, color: '#6B7280' }}>{planLabel} · {monthStr}</div>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#222222', margin: '0 0 4px', letterSpacing: '-0.02em', fontFamily: "'Source Serif 4', Georgia, serif" }}>Overview</h1>
+          <div style={{ fontSize: 14, color: '#5F6368' }}>{planLabel} · {monthStr}</div>
         </div>
-        <div style={{ fontSize: 13, color: '#9CA3AF' }}>Last updated: Today at {timeStr}</div>
+        <div style={{ fontSize: 13, color: '#5F6368' }}>Last updated: Today at {timeStr}</div>
       </div>
 
       {/* 1 — KPI Strip */}
@@ -165,10 +165,10 @@ export default function OverviewPage({
             <div key={card.label} style={CARD}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <card.Icon size={16} color={card.iconColor} />
-                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: '#6B7280', textTransform: 'uppercase' }}>{card.label}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: '#5F6368', textTransform: 'uppercase' }}>{card.label}</span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1 }}>{card.value}</div>
-              <div style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>{card.sub}</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#222222', letterSpacing: '-0.02em', lineHeight: 1 }}>{card.value}</div>
+              <div style={{ fontSize: 13, color: '#5F6368', marginTop: 4 }}>{card.sub}</div>
             </div>
           );
         })}
@@ -179,8 +179,8 @@ export default function OverviewPage({
         <div style={Object.assign({}, CARD, { marginBottom: 20 })}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Portfolio Trajectory</div>
-              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>Taxable · IRA · Roth · real $</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#222222' }}>Portfolio Trajectory</div>
+              <div style={{ fontSize: 12, color: '#5F6368', marginTop: 2 }}>Taxable · IRA · Roth · real $</div>
             </div>
             {sr > 0 && (
               <div style={{
@@ -214,20 +214,20 @@ export default function OverviewPage({
                   return ['$' + v + 'k', lbl];
                 }}
                 labelFormatter={function(l) { return 'Year ' + l; }}
-                contentStyle={{ fontSize: 12, border: '1px solid #E5E7EB', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                contentStyle={{ fontSize: 12, border: '1px solid #D4D1C5', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
               />
-              <Area type="monotone" dataKey="taxable" stackId="s" stroke="none" fill="#C8A882" isAnimationActive={false} />
-              <Area type="monotone" dataKey="ira"     stackId="s" stroke="none" fill="#6B8FA8" isAnimationActive={false} />
-              <Area type="monotone" dataKey="roth"    stackId="s" stroke="none" fill="#7A9E7E" isAnimationActive={false} />
+              <Area type="monotone" dataKey="taxable" stackId="s" stroke="none" fill="#8A5515" isAnimationActive={false} />
+              <Area type="monotone" dataKey="ira"     stackId="s" stroke="none" fill="#0A4D54" isAnimationActive={false} />
+              <Area type="monotone" dataKey="roth"    stackId="s" stroke="none" fill="#4A9E8E" isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
 
           {/* Legend + nav link */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, paddingTop: 12, borderTop: '1px solid #D4D1C5' }}>
             {[
-              { color: '#C8A882', label: 'Taxable / Cash'   },
-              { color: '#6B8FA8', label: 'IRA / Traditional' },
-              { color: '#7A9E7E', label: 'Roth'              },
+              { color: '#8A5515', label: 'Taxable / Cash'   },
+              { color: '#0A4D54', label: 'IRA / Traditional' },
+              { color: '#4A9E8E', label: 'Roth'              },
             ].map(function(l) {
               return (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -255,8 +255,8 @@ export default function OverviewPage({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>⚡</span>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Quick What-If Scenarios</div>
-              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>See instant impact of common changes</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#222222' }}>Quick What-If Scenarios</div>
+              <div style={{ fontSize: 12, color: '#5F6368', marginTop: 1 }}>See instant impact of common changes</div>
             </div>
           </div>
         </div>
@@ -270,12 +270,12 @@ export default function OverviewPage({
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 width: '100%', padding: '14px 20px',
-                background: 'transparent', border: 'none', borderBottom: '1px solid #E5E7EB',
+                background: 'transparent', border: 'none', borderBottom: '1px solid #D4D1C5',
                 cursor: 'pointer', textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: 13, color: '#374151' }}>{s.label}</span>
-              <span style={{ fontSize: 13, color: '#9CA3AF' }}>→</span>
+              <span style={{ fontSize: 13, color: '#222222' }}>{s.label}</span>
+              <span style={{ fontSize: 13, color: '#5F6368' }}>→</span>
             </button>
           );
         })}

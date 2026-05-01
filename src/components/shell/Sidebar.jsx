@@ -67,15 +67,15 @@ export default function Sidebar({ activeTab, setActiveTab, activeScen, successRa
       width: 200,
       minWidth: 200,
       flexShrink: 0,
-      background: '#F5F3EF',
-      borderRight: '1px solid #E8E4DC',
+      background: '#FFFFFF',
+      borderRight: '1px solid #D4D1C5',
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
       overflow: 'hidden',
     }}>
       {/* Logo + wordmark */}
-      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #E8E4DC' }}>
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #D4D1C5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8,
@@ -87,7 +87,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeScen, successRa
           </div>
           <span style={{ color: '#0F5E66', fontSize: 14, fontWeight: 700, letterSpacing: -0.3 }}>RetireStrong</span>
         </div>
-        <div style={{ fontSize: 11, color: '#6B7280', paddingLeft: 2 }}>
+        <div style={{ fontSize: 11, color: '#5F6368', paddingLeft: 2 }}>
           {scenarioDisplayName} · <span style={{ fontWeight: 600 }}>{successRate}%</span>
         </div>
       </div>
@@ -98,9 +98,9 @@ export default function Sidebar({ activeTab, setActiveTab, activeScen, successRa
           return (
             <div key={group.label} style={{ marginBottom: 20 }}>
               <div style={{
-                fontSize: 9,
-                color: '#6B7280',
-                letterSpacing: '0.1em',
+                fontSize: 11,
+                color: '#5F6368',
+                letterSpacing: '0.07em',
                 textTransform: 'uppercase',
                 padding: '0 16px',
                 marginBottom: 4,
@@ -127,8 +127,8 @@ export default function Sidebar({ activeTab, setActiveTab, activeScen, successRa
                       fontSize: 13,
                       fontWeight: active ? 600 : 400,
                       textAlign: 'left',
-                      background: active ? '#0A4D54' : isHovered ? '#F0EDE8' : 'transparent',
-                      color: active ? '#FFFFFF' : '#374151',
+                      background: active ? '#0A4D54' : isHovered ? '#F5F3EF' : 'transparent',
+                      color: active ? '#FFFFFF' : '#222222',
                       borderRadius: 6,
                       borderLeft: 'none',
                       transition: 'background 0.12s',
@@ -270,7 +270,7 @@ export default function Sidebar({ activeTab, setActiveTab, activeScen, successRa
             )}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#6B7280' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#5F6368' }}>
           <div style={{
             width: 6, height: 6, borderRadius: '50%',
             background: dataSource === 'database' ? '#10b981' : '#fbbf24',

@@ -1,75 +1,72 @@
 :root {
-  --rs-bg-page:        #F5F3EF;
-  --rs-bg-card:        #FFFFFF;
-  --rs-bg-card-hover:  #FAFAF8;
-  --rs-border:         #E8E5E0;
-  --rs-sidebar-bg:            #F5F3EF;
-  --rs-rail-bg:               #F5F3EF;
-  --rs-sidebar-border:        #E8E4DC;
-  --rs-sidebar-brand-text:    #0F5E66;
-  --rs-sidebar-active-bg:     #0A4D54;
-  --rs-sidebar-active-text:   #FFFFFF;
-  --rs-sidebar-text:          #374151;
-  --rs-sidebar-text-muted:    #6B7280;
-  --rs-sidebar-subtitle:      #6B7280;
-  --rs-teal-dark:      #0F766E;
+  /* Primary Colors */
+  --rs-primary:        #0A4D54;
+  --rs-teal-dark:      #0A4D54;
   --rs-teal-mid:       #4A9E8E;
-  --rs-teal-light:     #CCFBF1;
-  --rs-text-primary:   #1A1A1A;
-  --rs-text-secondary: #6B7280;
-  --rs-text-muted:     #9CA3AF;
-  --rs-amber:          #D97706;
-  --rs-amber-light:    #FEF3C7;
-  --rs-blue:           #2563EB;
-  --rs-green:          #059669;
-  --rs-red:            #DC2626;
+  --rs-green:          #3D6337;
+  --rs-brown:          #8A5515;
+  --rs-red:            #8B3528;
 
-  /* ── Phase B layout tokens ── */
-  --rs-working:        #B8651A;
-  --rs-working-bg:     #FBF0E3;
-  --rs-working-border: #D97706;
-  --rs-surface-2:      #FBFBF9;
-  --rs-surface-3:      #F2F1EC;
-
-  /* ── Mode toggle ── */
-  --rs-mode-active-bg:     #FFFFFF;
-  --rs-mode-active-shadow: 0 1px 2px rgba(40,37,29,0.08);
-
-  /* ── Card shadow levels ── */
-  --rs-shadow-sm:       0 1px 3px rgba(0,0,0,0.06);
-  --rs-shadow-md:       0 2px 8px rgba(10,77,84,0.10);
-  --rs-shadow-priority: 0 2px 12px rgba(10,77,84,0.15);
-
-  /* ── Card system ── */
-  --rs-card-radius:              12px;
-  --rs-card-border:              1px solid #E8E4DC;
-  --rs-card-shadow:              0 1px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --rs-card-shadow-md:           0 4px 16px rgba(10,77,84,0.08), 0 1px 3px rgba(0,0,0,0.04);
-  --rs-card-padding:             20px 24px;
-  --rs-card-padding-sm:          14px 16px;
-  --rs-card-priority-border:     1px solid #0A4D54;
-  --rs-card-priority-shadow:     0 2px 12px rgba(10,77,84,0.12);
-  --rs-card-priority-top:        3px solid #0A4D54;
-
-  /* ── Chart colors (consistent across all charts) ── */
+  /* Chart Colors */
   --rs-chart-total:    #0A4D54;
   --rs-chart-ira:      #3D6337;
   --rs-chart-roth:     #4A9E8E;
+  --rs-chart-taxable:  #8A5515;
   --rs-chart-expenses: #8B3528;
-  --rs-chart-income:   #3D6337;
-  --rs-chart-gap:      #8A5515;
 
-  /* ── Status colors ── */
+  /* Bucket Colors */
+  --rs-bucket-1:       #3D6337;
+  --rs-bucket-2:       #0A4D54;
+  --rs-bucket-3:       #8A5515;
+
+  /* Backgrounds */
+  --rs-bg-page:        #F5F3EF;
+  --rs-bg-card:        #FCFBF8;
+  --rs-bg-secondary:   #F0EDE8;
+
+  /* Borders */
+  --rs-border:         #D4D1C5;
+  --rs-card-radius:    8px;
+
+  /* Typography */
+  --rs-text-primary:   #222222;
+  --rs-text-secondary: #5F6368;
+  --rs-text-muted:     #5F6368;
+
+  /* Status */
+  --rs-success:        #3D6337;
+  --rs-warning:        #8A5515;
+  --rs-danger:         #8B3528;
+  --rs-info:           #0A4D54;
+  --rs-amber:          #8A5515;
+
+  /* Shadows */
+  --rs-shadow-sm:      0 1px 3px rgba(0,0,0,0.08);
+  --rs-shadow-md:      0 2px 8px rgba(0,0,0,0.10);
+
+  /* Sidebar */
+  --rs-sidebar-bg:            #FFFFFF;
+  --rs-sidebar-border:        #D4D1C5;
+  --rs-sidebar-brand-text:    #0F5E66;
+  --rs-sidebar-active-bg:     #0A4D54;
+  --rs-sidebar-active-text:   #FFFFFF;
+  --rs-sidebar-text:          #222222;
+  --rs-sidebar-text-muted:    #5F6368;
+
+  /* Card system */
+  --rs-card-border:              1px solid #D4D1C5;
+  --rs-card-shadow:              0 1px 3px rgba(0,0,0,0.08);
+  --rs-card-padding:             24px;
+  --rs-card-padding-sm:          14px 16px;
+
+  /* Status backgrounds */
   --rs-success-bg:  #E6F1DD;
-  --rs-success:     #3D6337;
   --rs-warning-bg:  #FEF3C7;
-  --rs-warning:     #8A5515;
   --rs-danger-bg:   #FDE8E6;
-  --rs-danger:      #8B3528;
-  --rs-neutral-bg:  #F2F1EC;
-  --rs-neutral:     #6B7280;
+  --rs-neutral-bg:  #F0EDE8;
+  --rs-neutral:     #5F6368;
 
-  /* ── Typography scale ── */
+  /* Typography scale */
   --rs-text-display: 28px;
   --rs-text-title:   18px;
   --rs-text-body:    14px;
@@ -79,7 +76,7 @@
   --rs-kpi-weight:   700;
   --rs-kpi-spacing:  -0.02em;
 
-  /* ── Typography ── */
+  /* Fonts */
   --rs-font-display: 'Source Serif 4', Georgia, serif;
   --rs-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 }

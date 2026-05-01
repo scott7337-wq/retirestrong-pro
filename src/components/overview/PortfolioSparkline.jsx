@@ -7,9 +7,9 @@ import {
 var TEAL_DARK = '#0A4D54';
 var GREEN     = '#3D6337';
 var TEAL_MID  = '#4A9E8E';
-var PURPLE    = '#7C3AED';
-var BORDER    = '#E8E4DC';
-var MUTED     = '#9CA3AF';
+var PURPLE    = '#4A9E8E';
+var BORDER    = '#D4D1C5';
+var MUTED     = '#5F6368';
 
 function srColor(rate) {
   if (rate >= 85) return '#3D6337';
