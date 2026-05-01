@@ -232,8 +232,8 @@ export default function CashFlowTab({ ctx }) {
             <YAxis yAxisId="right" orientation="right" tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5" width={52}/>
             <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368', paddingTop: 8 }}/>
-            <Bar yAxisId="right" dataKey="portfolioWithdrawal" name="Portfolio Withdrawal" fill="#8A5515" maxBarSize={18} isAnimationActive={false}/>
-            <Bar yAxisId="right" dataKey="ssIncome"            name="Social Security"      fill="#3D6337" maxBarSize={18} isAnimationActive={false}/>
+            <Bar yAxisId="right" dataKey="portfolioWithdrawal" name="Portfolio Withdrawal" fill="#8A5515" fillOpacity={1} maxBarSize={18} isAnimationActive={false}/>
+            <Bar yAxisId="right" dataKey="ssIncome"            name="Social Security"      fill="#3D6337" fillOpacity={1} maxBarSize={18} isAnimationActive={false}/>
             <Area yAxisId="left" type="monotone" dataKey="balance" name="Total Balance"
               stroke="#0A4D54" fill="url(#cfBalGrad)" strokeWidth={2.5}
               fillOpacity={1} isAnimationActive={false}/>
@@ -312,9 +312,9 @@ export default function CashFlowTab({ ctx }) {
             <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: '#5F6368' }} stroke="#D4D1C5" width={52}/>
             <Tooltip formatter={function(value, name) { return [fmtShort(value), name]; }}/>
             <Legend wrapperStyle={{ fontSize: 11, color: '#5F6368', paddingTop: 8 }}/>
-            <Bar dataKey="b1" name="B1 Cash"   stackId="s" fill="#4A9E8E" isAnimationActive={false}/>
-            <Bar dataKey="b2" name="B2 Bonds"  stackId="s" fill="#3D6337" isAnimationActive={false}/>
-            <Bar dataKey="b3" name="B3 Growth" stackId="s" fill="#8A5515" isAnimationActive={false}/>
+            <Bar dataKey="b1" name="B1 Cash"   stackId="s" fill="#4A9E8E" fillOpacity={1} isAnimationActive={false}/>
+            <Bar dataKey="b2" name="B2 Bonds"  stackId="s" fill="#3D6337" fillOpacity={1} isAnimationActive={false}/>
+            <Bar dataKey="b3" name="B3 Growth" stackId="s" fill="#8A5515" fillOpacity={1} isAnimationActive={false}/>
           </BarChart>
         </ResponsiveContainer>
       </div>
